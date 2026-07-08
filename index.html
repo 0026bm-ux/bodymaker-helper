@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>商品情報検索システム | 社内用カタログ</title>
+  
+  <!-- Styling -->
+  <link rel="stylesheet" href="style.css">
+  
+  <!-- External JS Dependencies (CDNs) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js" defer></script>
+  <script src="https://unpkg.com/html5-qrcode" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
+  
+  <!-- Core Logic -->
+  <script src="app.js" defer></script>
+</head>
+<body>
+
+  <!-- Full Screen Password Login Gate -->
+  <div id="loginGate" class="login-gate" style="display: flex;">
+    <div class="login-box">
+      <div class="login-logo">
+        <svg class="search-logo-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="width: 48px; height: 48px; color: var(--color-yellow-primary); margin-bottom: 12px;">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/>
+        </svg>
+      </div>
+      <h2>セキュリティ認証</h2>
+      <p>このアプリケーションを使用するには、店舗共通パスワードを入力してください。</p>
+      <div style="width: 100%; margin-top: 16px;">
+        <input type="password" id="loginPasswordInput" placeholder="パスワードを入力" style="width: 100%; padding: 12px 16px; border-radius: var(--radius-md); background-color: var(--color-bg-input); border: 1px solid var(--color-border); color: #FFFFFF; font-size: 16px; margin-bottom: 16px; box-sizing: border-box; text-align: center;">
+        <button id="loginSubmitBtn" style="width: 100%; padding: 12px; background-color: var(--color-yellow-primary); color: #000000; border-radius: var(--radius-md); font-weight: 700; font-size: 16px; cursor: pointer; border: none;">ログイン</button>
+        <div id="loginErrorMsg" style="color: var(--color-status-danger); margin-top: 12px; font-weight: 600; display: none;">パスワードが正しくありません</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- App Header -->
+  <header class="app-header">
+    <div class="container header-content">
+      <div class="logo-section">
+        <div class="logo-icon">🔍</div>
+        <div>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span class="logo-text">商品情報検索</span>
+            <span class="logo-tag">社内用</span>
+          </div>
+          <span style="font-size: 10px; color: var(--color-text-gray); display: block; margin-top: 1px;">Store Assist System v1.0</span>
+        </div>
+      </div>
+      <div style="display: flex; gap: 8px;">
+        <button class="settings-btn" id="masterImportBtn" title="マスタ取込" aria-label="マスタ取込">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z"/>
+          </svg>
+        </button>
+        <button class="settings-btn" id="settingsBtn" title="設定" aria-label="設定">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.43l-1.003.828c-.293.241-.438.613-.43.992a7.723 7.723 0 010 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.43l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.991l-1.004-.827a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.28z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Sticky Search Area -->
+  <div class="search-sticky-wrapper">
+    <div class="container">
+      <div class="search-box-container">
+        <div class="search-input-wrapper">
+          <span class="search-icon-left">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+          </span>
+          <input type="text" class="search-input" id="searchInput" placeholder="商品番号、JAN、商品名で部分一致検索" autocomplete="off" aria-label="検索">
+          <button class="search-clear-btn" id="searchClear" aria-label="入力をクリア">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+        <button class="scan-camera-btn" id="scanBtn" title="バーコード読み取り" aria-label="バーコード読み取り">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z"/>
+          </svg>
+          <span style="font-size:14px; display:none;">スキャン</span>
+        </button>
+        
+        <!-- Suggestions Dropdown Overlay -->
+        <div class="suggestions-panel" id="suggestions"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content Container -->
+  <main class="container">
+    
+    <!-- ==========================================
+         DASHBOARD / TOP HOME VIEW
+         ========================================== -->
+    <div class="dashboard-view" id="dashboardView">
+      
+      <!-- Welcome Guide Card -->
+      <div class="dashboard-card guide-card" onclick="document.getElementById('scanBtn').click()">
+        <div class="guide-icon-box">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5zM16.875 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zM16.5 13.5h.008v.008h-.008V13.5zm.375 1.5a.375.375 0 11-.75 0 .375.375 0 01.75 0zm-.75 1.5h.008v.008h-.008v-.008zm3 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm-.75 1.5h.008v.008h-.008v-.008zm1.5-3a.375.375 0 11-.75 0 .375.375 0 01.75 0zm-3-3a.375.375 0 11-.75 0 .375.375 0 01.75 0zm.75 1.5h.008v.008h-.008V15z"/>
+          </svg>
+        </div>
+        <div class="guide-text">
+          <h3>バーコードを読み取る</h3>
+          <p>タップしてカメラを起動し、商品のJANコードをスキャンして検索します。</p>
+        </div>
+      </div>
+
+      <!-- Search History Card -->
+      <div class="dashboard-card">
+        <h2 class="dashboard-card-title">
+          <svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          最近の検索履歴
+        </h2>
+        <div class="history-list" id="historyList">
+          <div class="empty-state">履歴はありません</div>
+        </div>
+      </div>
+
+      <!-- Sync Status & Stats -->
+      <div class="stats-grid">
+        <div class="stat-box">
+          <span class="stat-label">登録商品数</span>
+          <span class="stat-value" id="totalCountVal">-</span>
+          <span class="stat-sub">件のデータが利用可能</span>
+        </div>
+        <div class="stat-box">
+          <span class="stat-label">最終同期日時</span>
+          <span class="stat-value" id="syncTimeVal" style="font-size: 13px; font-weight: 700; height: 30px; display: flex; align-items: center;">-</span>
+          <span class="stat-sub">ローカルに自動保存</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ==========================================
+         PRODUCT DETAILS VIEW
+         ========================================== -->
+    <div class="details-view" id="detailsView">
+      
+      <!-- Back to list header link -->
+      <div style="margin-bottom: 16px;">
+        <button onclick="goBackToHome()" style="color: var(--color-text-gray); display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 15px; cursor: pointer;">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"/>
+          </svg>
+          一覧に戻る
+        </button>
+      </div>
+
+      <!-- Sticky Jump-to navigation tab buttons -->
+      <div class="details-tabs">
+        <button class="tab-btn active" data-target="info">商品情報</button>
+        <button class="tab-btn" data-target="stock">在庫情報</button>
+        <button class="tab-btn" data-target="assembly">組立・仕様</button>
+        <button class="tab-btn" data-target="manual">説明書</button>
+        <button class="tab-btn" id="tabBtnVideo" data-target="video">動画</button>
+        <button class="tab-btn" id="tabBtnRelated" data-target="related">関連商品</button>
+      </div>
+
+      <!-- 1. Hero Summary Card (Anchor target 'info') -->
+      <div class="detail-hero-card" id="info">
+        <div class="detail-img-box" id="detailImgBox">
+          <!-- Populated by JS -->
+        </div>
+        <div class="detail-hero-content">
+          <div class="detail-badge-row">
+            <span class="detail-sku" id="detailSku">SKU-000</span>
+            <span class="detail-stock-badge ok" id="detailStockBadge">在庫数: -</span>
+          </div>
+          <h1 class="detail-title" id="detailTitle">ロード中...</h1>
+          
+          <div class="detail-price-row" style="display: flex; justify-content: space-between; align-items: flex-end; width: 100%;">
+            <div style="display: flex; align-items: baseline; gap: 4px;">
+              <span class="detail-price-symbol">税込</span>
+              <span class="detail-price-val" id="detailPriceVal">-</span>
+              <span class="detail-price-tax">円</span>
+            </div>
+            <div id="detailPriceJan" style="display: none; align-self: flex-end; margin-bottom: -4px;">
+              <!-- Dynamic barcode SVG is rendered here -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Set Composition Section -->
+      <div class="detail-section-card" id="detailSetCompositionSection" style="display: none; border: 2px solid var(--color-yellow-primary); background: rgba(255, 215, 0, 0.02);">
+        <h2 class="section-title" style="color: var(--color-yellow-primary);">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="stroke: var(--color-yellow-primary);">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+          </svg>
+          セット構成品（単品内訳）
+        </h2>
+        <div id="detailSetCompositionContainer" style="display: flex; flex-direction: column; gap: 12px; margin-top: 12px;">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- Descriptions Section -->
+      <div class="detail-section-card">
+        <h2 class="section-title">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 111.063.852l-.708 2.836a.75.75 0 001.063.852l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008h-.008V8.25z"/>
+          </svg>
+          商品説明
+        </h2>
+        <p class="description-text" id="detailDesc">-</p>
+      </div>
+
+      <!-- Specification Table -->
+      <div class="detail-section-card">
+        <h2 class="section-title">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 5.25h16.5m-16.5 4.5h16.5m-16.5 4.5h16.5m-16.5 4.5h16.5"/>
+          </svg>
+          仕様スペック
+        </h2>
+        <div class="spec-grid">
+          <div class="spec-item">
+            <span class="spec-label">商品番号 (SKU)</span>
+            <span class="spec-value" id="valSku">-</span>
+          </div>
+          <div class="spec-item">
+            <span class="spec-label">JANコード</span>
+            <span class="spec-value" id="valJan">-</span>
+          </div>
+          <div class="spec-item">
+            <span class="spec-label">カラー</span>
+            <span class="spec-value" id="valColor">-</span>
+          </div>
+          <div class="spec-item">
+            <span class="spec-label">サイズ</span>
+            <span class="spec-value" id="valSize">-</span>
+          </div>
+          <div class="spec-item">
+            <span class="spec-label">重量</span>
+            <span class="spec-value" id="valWeight">-</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Stock and Shipping Info (Anchor target 'stock') -->
+      <div class="detail-section-card" id="stock">
+        <h2 class="section-title">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.129-1.125V11.25M2.25 14.25h16.5M2.25 14.25V7.5A2.25 2.25 0 014.5 5.25h15A2.25 2.25 0 0121.75 7.5v6.75m-20.25-3h20.25M9 7.5h.008v.008H9V7.5zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/>
+          </svg>
+          配送・梱包サイズ
+        </h2>
+        <div class="spec-grid">
+          <div class="spec-item">
+            <span class="spec-label">送料区分</span>
+            <span class="spec-value large" id="valShipping">-</span>
+          </div>
+          <div class="spec-item">
+            <span class="spec-label">梱包サイズ</span>
+            <span class="spec-value" id="valPackageSize">-</span>
+          </div>
+        </div>
+        
+        <div class="store-stock-section" id="detailStoreStockSection" style="margin-top: 16px; border-top: 1px solid var(--color-border); padding-top: 16px; display: none;">
+          <span class="spec-label" style="display:block; margin-bottom: 8px; font-weight: 700;">■ 店舗別在庫状況 (店在庫)</span>
+          <div id="detailStoreStockContainer">
+            <!-- Rendered dynamically as table by JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Assembly and Precautions (Anchor target 'assembly') -->
+      <div class="detail-section-card" id="assembly">
+        <h2 class="section-title">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17L17.25 21A2.67 2.67 0 0021 17.25l-5.83-5.83m-3.75 3.75L6 9.75M11.42 15.17l2.42-2.42M6 9.75L1.75 5.5A2.67 2.67 0 015.5 1.75L9.75 6m-3.75 3.75V6m0 3.75H9.75M9.75 6l2.42-2.42m0 0L17.25 9m-5.08-5.42L9.75 6m5.08-2.42a2.67 2.67 0 013.75 3.75L12.75 13"/>
+          </svg>
+          組立仕様 & 安全耐荷重
+        </h2>
+        
+        <div class="spec-grid" style="margin-bottom: 16px;">
+          <div class="spec-item">
+            <span class="spec-label">耐荷重</span>
+            <span class="spec-value large" id="valCapacity">-</span>
+          </div>
+          <div class="spec-item">
+            <span class="spec-label">素材</span>
+            <span class="spec-value" id="valMaterials">-</span>
+          </div>
+          <div class="spec-item">
+            <span class="spec-label">組立目安時間</span>
+            <span class="spec-value" id="valAssemblyTime">-</span>
+          </div>
+          <div class="spec-item">
+            <span class="spec-label">推奨組立人数</span>
+            <span class="spec-value" id="valAssemblyCrew">-</span>
+          </div>
+          <div class="spec-item">
+            <span class="spec-label">メーカー保証期間</span>
+            <span class="spec-value" id="valWarranty">-</span>
+          </div>
+        </div>
+
+        <span class="spec-label" style="display:block; margin-bottom: 6px; font-weight: 700;">■ 使用上の注意事項</span>
+        <ul class="bullet-list" id="detailCaution">
+          <!-- Populated by JS -->
+        </ul>
+      </div>
+
+      <!-- 4. User Manual PDF (Anchor target 'manual') -->
+      <div class="detail-section-card" id="manual">
+        <h2 class="section-title">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/>
+          </svg>
+          取扱説明書 (PDF)
+        </h2>
+        <div class="link-box pdf" id="detailManualBox">
+          <div class="link-box-left">
+            <div class="link-box-icon pdf">PDF</div>
+            <div>
+              <div class="link-box-title">取扱説明書・組立説明書.pdf</div>
+              <div class="link-box-sub">PDF形式 (別タブで表示)</div>
+            </div>
+          </div>
+          <span class="link-box-arrow">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/>
+            </svg>
+          </span>
+        </div>
+      </div>
+
+      <!-- 5. Product Videos (Anchor target 'video') -->
+      <div class="detail-section-card" id="detailVideoSection">
+        <h2 class="section-title">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 20.25h12A2.25 2.25 0 0020.25 18V6A2.25 2.25 0 0018 3.75H6A2.25 2.25 0 003.75 6v12A2.25 2.25 0 006 20.25z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 9.75l4.5 2.25-4.5 2.25V9.75z"/>
+          </svg>
+          商品解説・組立説明動画
+        </h2>
+        <div id="videoContainer">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <!-- 6. Related Products (Anchor target 'related') -->
+      <div class="detail-section-card" id="detailRelatedSection">
+        <h2 class="section-title">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 3.75V16.5L12 14.25 7.5 16.5V3.75m9 0H18A2.25 2.25 0 0120.25 6v12A2.25 2.25 0 0118 20.25H6A2.25 2.25 0 013.75 18V6A2.25 2.25 0 016 3.75h1.5m9 0h-9"/>
+          </svg>
+          関連商品・パーツ
+        </h2>
+        <div class="related-grid" id="relatedGrid">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Floating Jump back button -->
+  <button class="back-to-top-btn" id="backToTopBtn" title="上に戻る" aria-label="上に戻る">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5"/>
+    </svg>
+  </button>
+
+  <!-- ==========================================
+       MODAL: CAMERA SCANNER OVERLAY
+       ========================================== -->
+  <div class="modal-overlay" id="scannerModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title">バーコードをスキャン</h2>
+        <button class="modal-close-btn" onclick="closeModal('scannerModal')" aria-label="閉じる">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        
+        <!-- Scanner viewport container -->
+        <div class="scanner-container">
+          <div id="reader"></div>
+          <div class="scanner-laser"></div>
+        </div>
+        
+        <p class="scanner-help-text">カメラへのアクセス許可が必要です。</p>
+        
+        <!-- Mock Simulator Panel for Desktop / Development Testing -->
+        <div class="mock-scanner-panel">
+          <h3 class="mock-title">【開発テスト用】模擬バーコード読み取り</h3>
+          <div class="mock-buttons-row">
+            <button class="mock-btn" onclick="triggerMockScan('4901234567890')">ラック (MTR-100)</button>
+            <button class="mock-btn" onclick="triggerMockScan('4901234567891')">昇降デスク (DSK-202)</button>
+            <button class="mock-btn" onclick="triggerMockScan('4901234567892')">オフィスチェア (CHR-305)</button>
+            <button class="mock-btn" onclick="triggerMockScan('4901234567893')">クランプライト (LMP-408)</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MODAL: CONFIGURATION & SETTINGS
+       ========================================== -->
+  <div class="modal-overlay" id="settingsModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title">設定・データ同期</h2>
+        <button class="modal-close-btn" onclick="closeModal('settingsModal')" aria-label="閉じる">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        
+        <!-- Google Sheet Config Group -->
+        <div class="settings-group">
+          <label class="settings-label" for="sheetUrlInput">Google スプレッドシート URL</label>
+          <input type="text" class="settings-input" id="sheetUrlInput" placeholder="https://docs.google.com/spreadsheets/d/...">
+          <p style="font-size: 11px; color: var(--color-text-gray); margin-bottom: 12px; line-height: 1.3;">
+            ※スプレッドシートは「リンクを知っている全員が閲覧可能」に設定してください。
+          </p>
+          <button class="settings-btn-save" id="saveSettingsBtn">URLを保存して同期</button>
+        </div>
+        
+        <!-- CSV File Upload Group -->
+        <div class="settings-group" style="border-top: 1px solid var(--color-border); padding-top: 16px;">
+          <label class="settings-label">CSVファイルを直接読み込む</label>
+          <div class="file-upload-box">
+            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z"/>
+            </svg>
+            <span>CSVファイルをドラッグ＆ドロップまたはクリックで選択</span>
+            <input type="file" id="csvFileInput" accept=".csv" class="hidden-file-input">
+          </div>
+        </div>
+        
+        <!-- Reset DB Group -->
+        <div class="settings-action-row" style="border-top: 1px solid var(--color-border); padding-top: 16px;">
+          <button class="settings-btn-sec danger" id="resetDbBtn">キャッシュ初期化</button>
+          <button class="settings-btn-sec" onclick="closeModal('settingsModal')">キャンセル</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       MODAL: MASTER DATA IMPORT (マスタ取込)
+       ========================================== -->
+  <div class="modal-overlay" id="masterImportModal">
+    <div class="modal-content" style="max-width: 600px; max-height: 90vh; display: flex; flex-direction: column;">
+      <div class="modal-header">
+        <h2 class="modal-title">マスタデータ一括取り込み</h2>
+        <button class="modal-close-btn" onclick="closeModal('masterImportModal')" aria-label="閉じる">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body" style="overflow-y: auto; flex-grow: 1; padding: 20px;">
+        <p style="font-size: 13px; color: var(--color-text-gray); margin-bottom: 16px; line-height: 1.4;">
+          社内システムからエクスポートした各CSV/Excelファイル、および取扱説明書PDFファイルを選択してインポートします。<br>
+          ※CSVファイルはShift_JISおよびUTF-8のエンコーディングに自動対応します。
+        </p>
+
+        <div class="master-import-grid">
+          <!-- 1. NS商品マスタ -->
+          <div class="master-import-card" id="card_nsMaster">
+            <div class="master-card-info">
+              <div class="master-card-header">
+                <span class="master-card-title">① NS商品マスタ [必須]</span>
+                <span class="master-sync-badge badge-empty" id="sync_nsMaster">未同期</span>
+              </div>
+              <p class="master-card-desc">品番、JAN、品名、価格、在庫数、送料区分</p>
+            </div>
+            <div class="master-card-action">
+              <button class="master-upload-btn">
+                ファイル選択
+                <input type="file" class="master-file-input" data-master="nsMaster" accept=".csv,.xlsx,.xls">
+              </button>
+            </div>
+          </div>
+
+          <!-- 1-B. セット品構成マスタ -->
+          <div class="master-import-card" id="card_setCompositionMaster">
+            <div class="master-card-info">
+              <div class="master-card-header">
+                <span class="master-card-title">セット品構成マスタ</span>
+                <span class="master-sync-badge badge-empty" id="sync_setCompositionMaster">未同期</span>
+              </div>
+              <p class="master-card-desc">セット商品コード、セット商品名、構成商品コード、構成商品名、構成数量</p>
+            </div>
+            <div class="master-card-action">
+              <button class="master-upload-btn">
+                ファイル選択
+                <input type="file" class="master-file-input" data-master="setCompositionMaster" accept=".csv,.xlsx,.xls">
+              </button>
+            </div>
+          </div>
+
+          <!-- 2. 全店在庫NA -->
+          <div class="master-import-card" id="card_storeStockMaster">
+            <div class="master-card-info">
+              <div class="master-card-header">
+                <span class="master-card-title">② 全店在庫NA</span>
+                <span class="master-sync-badge badge-empty" id="sync_storeStockMaster">未同期</span>
+              </div>
+              <p class="master-card-desc">店舗別在庫数（F列以降の店舗名・数値）</p>
+            </div>
+            <div class="master-card-action">
+              <button class="master-upload-btn">
+                ファイル選択
+                <input type="file" class="master-file-input" data-master="storeStockMaster" accept=".csv,.xlsx,.xls">
+              </button>
+            </div>
+          </div>
+
+          <!-- 3. wiki書き出し -->
+          <div class="master-import-card" id="card_specsMaster">
+            <div class="master-card-info">
+              <div class="master-card-header">
+                <span class="master-card-title">③ wiki書き出し</span>
+                <span class="master-sync-badge badge-empty" id="sync_specsMaster">未同期</span>
+              </div>
+              <p class="master-card-desc">カラー、サイズ、本体重量、説明文、素材、注意、保証有無</p>
+            </div>
+            <div class="master-card-action">
+              <button class="master-upload-btn">
+                ファイル選択
+                <input type="file" class="master-file-input" data-master="specsMaster" accept=".csv,.xlsx,.xls">
+              </button>
+            </div>
+          </div>
+
+          <!-- 4. サイズ重量_最新 -->
+          <div class="master-import-card" id="card_packageMaster">
+            <div class="master-card-info">
+              <div class="master-card-header">
+                <span class="master-card-title">④ サイズ重量_最新</span>
+                <span class="master-sync-badge badge-empty" id="sync_packageMaster">未同期</span>
+              </div>
+              <p class="master-card-desc">梱包サイズ（縦・横・高さ・梱包重量）</p>
+            </div>
+            <div class="master-card-action">
+              <button class="master-upload-btn">
+                ファイル選択
+                <input type="file" class="master-file-input" data-master="packageMaster" accept=".csv,.xlsx,.xls">
+              </button>
+            </div>
+          </div>
+
+          <!-- 5. 問合わせ管理書き出し -->
+          <div class="master-import-card" id="card_capacityMaster">
+            <div class="master-card-info">
+              <div class="master-card-header">
+                <span class="master-card-title">⑤ 問合わせ管理書き出し</span>
+                <span class="master-sync-badge badge-empty" id="sync_capacityMaster">未同期</span>
+              </div>
+              <p class="master-card-desc">耐荷重スペック</p>
+            </div>
+            <div class="master-card-action">
+              <button class="master-upload-btn">
+                ファイル選択
+                <input type="file" class="master-file-input" data-master="capacityMaster" accept=".csv,.xlsx,.xls">
+              </button>
+            </div>
+          </div>
+
+          <!-- 6. 組立所要時間 -->
+          <div class="master-import-card" id="card_assemblyMaster">
+            <div class="master-card-info">
+              <div class="master-card-header">
+                <span class="master-card-title">⑥ 組立所要時間</span>
+                <span class="master-sync-badge badge-empty" id="sync_assemblyMaster">未同期</span>
+              </div>
+              <p class="master-card-desc">組立目安時間、推奨組立人数</p>
+            </div>
+            <div class="master-card-action">
+              <button class="master-upload-btn">
+                ファイル選択
+                <input type="file" class="master-file-input" data-master="assemblyMaster" accept=".csv,.xlsx,.xls">
+              </button>
+            </div>
+          </div>
+
+          <!-- 7. 商品一覧 -->
+          <div class="master-import-card" id="card_manualMaster">
+            <div class="master-card-info">
+              <div class="master-card-header">
+                <span class="master-card-title">⑦ 商品一覧</span>
+                <span class="master-sync-badge badge-empty" id="sync_manualMaster">未同期</span>
+              </div>
+              <p class="master-card-desc">取扱説明書PDFの参照URL</p>
+            </div>
+            <div class="master-card-action">
+              <button class="master-upload-btn">
+                ファイル選択
+                <input type="file" class="master-file-input" data-master="manualMaster" accept=".csv,.xlsx,.xls">
+              </button>
+            </div>
+          </div>
+
+          <!-- 8. 動画・画像マスタ（手動・カスタム用） -->
+          <div class="master-import-card" id="card_videoMaster">
+            <div class="master-card-info">
+              <div class="master-card-header">
+                <span class="master-card-title">⑧ 動画・画像・カスタムマスタ</span>
+                <span class="master-sync-badge badge-empty" id="sync_videoMaster">未同期</span>
+              </div>
+              <p class="master-card-desc">手動入力項目：組立動画URL、使用動画URL、画像パス</p>
+            </div>
+            <div class="master-card-action">
+              <button class="master-upload-btn">
+                ファイル選択
+                <input type="file" class="master-file-input" data-master="videoMaster" accept=".csv,.xlsx,.xls">
+              </button>
+            </div>
+          </div>
+
+          <!-- Video URL Direct Upload Area -->
+          <div class="master-import-card video-url-upload-card" style="grid-column: 1 / -1; border: 1px dashed var(--color-yellow-primary); background: rgba(255, 215, 0, 0.03); padding: 14px;">
+            <div class="master-card-info">
+              <div class="master-card-header" style="display:flex; justify-content:space-between; align-items:center;">
+                <span class="master-card-title" style="color: var(--color-yellow-primary); font-weight:700;">🎥 組立・使用・注意動画URLの直接アップロード</span>
+                <span class="master-sync-badge" id="sync_videoUrlCount" style="background: rgba(255,255,255,0.1); border: 1px solid var(--color-border); font-size:11px; padding:2px 8px; border-radius:10px;">登録済: 0件</span>
+              </div>
+              <p class="master-card-desc" style="color: var(--color-text-gray); font-size:12px; margin-top: 4px;">
+                テキストファイル（<code>.txt</code>）またはインターネットショートカット（<code>.url</code>）をドラッグ＆ドロップすると、商品データに動画URLが登録されます。<br>
+                ファイル名は「商品番号_動画タイプ.txt」（例: <code>MTR-100_組立動画.txt</code>、<code>MTR-100_使用動画.txt</code>、<code>MTR-100_注意動画.txt</code>）にしてください。
+              </p>
+            </div>
+            <div class="master-card-action" style="margin-top: 10px; width: 100%;">
+              <div class="file-upload-box" style="padding: 14px; border-radius: var(--radius-md); text-align:center;">
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-bottom: 2px;">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z"/>
+                </svg>
+                <span style="font-size:11px; display:block;">動画URLファイル（.txt, .url）を複数選択またはドラッグ＆ドロップ</span>
+                <input type="file" id="videoUrlFileInput" class="hidden-file-input" accept=".txt,.url" multiple>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-action-row" style="margin-top: 20px; border-top: 1px solid var(--color-border); padding-top: 16px; display: flex; gap: 10px; justify-content: space-between;">
+          <div>
+            <button class="settings-btn-sec danger" id="clearAllMasterBtn" style="font-weight:700;">全マスタデータをクリア</button>
+          </div>
+          <div style="display: flex; gap: 10px;">
+            <button class="settings-btn-sec" id="exportMergedCsvBtn" style="background-color: var(--color-yellow-primary); color: #000000; font-weight:700;">統合CSVを書き出し</button>
+            <button class="settings-btn-sec" onclick="closeModal('masterImportModal')" style="font-weight:700;">閉じる</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
