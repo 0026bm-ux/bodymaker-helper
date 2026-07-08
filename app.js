@@ -29,7 +29,7 @@ const STORAGE_KEYS = {
 class IndexedDBHelper {
   constructor() {
     this.dbName = 'ProductSearchDB';
-    this.dbVersion = 1;
+    this.dbVersion = 2; // Upgraded version to support products database store
     this.db = null;
   }
 
@@ -45,6 +45,9 @@ class IndexedDBHelper {
         const db = e.target.result;
         if (!db.objectStoreNames.contains('pdfs')) {
           db.createObjectStore('pdfs', { keyPath: 'sku' });
+        }
+        if (!db.objectStoreNames.contains('products')) {
+          db.createObjectStore('products', { keyPath: 'key' });
         }
       };
     });
@@ -88,6 +91,48 @@ class IndexedDBHelper {
       if (!this.db) return reject("Database not initialized");
       const transaction = this.db.transaction(['pdfs'], 'readwrite');
       const store = transaction.objectStore('pdfs');
+      const request = store.clear();
+      request.onsuccess = () => resolve();
+      request.onerror = (e) => reject(e);
+    });
+  }
+
+  // --- NEW PRODUCTS CACHE METHODS ---
+  saveProducts(productsArray) {
+    return new Promise((resolve, reject) => {
+      if (!this.db) return reject("Database not initialized");
+      const transaction = this.db.transaction(['products'], 'readwrite');
+      const store = transaction.objectStore('products');
+      const request = store.put({ key: 'list', value: productsArray });
+      request.onsuccess = () => resolve();
+      request.onerror = (e) => reject(e);
+    });
+  }
+
+  getProducts() {
+    return new Promise((resolve, reject) => {
+      if (!this.db) return resolve([]);
+      if (!this.db.objectStoreNames.contains('products')) {
+        return resolve([]);
+      }
+      const transaction = this.db.transaction(['products'], 'readonly');
+      const store = transaction.objectStore('products');
+      const request = store.get('list');
+      request.onsuccess = (e) => {
+        const result = e.target.result;
+        resolve(result ? result.value : []);
+      };
+      request.onerror = (e) => reject(e);
+    });
+  }
+
+  clearProducts() {
+    return new Promise((resolve, reject) => {
+      if (!this.db || !this.db.objectStoreNames.contains('products')) {
+        return resolve();
+      }
+      const transaction = this.db.transaction(['products'], 'readwrite');
+      const store = transaction.objectStore('products');
       const request = store.clear();
       request.onsuccess = () => resolve();
       request.onerror = (e) => reject(e);
@@ -341,21 +386,37 @@ function saveHistory() {
 
 // Fetch products from cache or fall back to bundled CSV
 function loadCachedProductsOrFetchDefault() {
-  const cachedData = localStorage.getItem(STORAGE_KEYS.PRODUCTS);
-  if (cachedData) {
-    try {
-      APP_STATE.products = JSON.parse(cachedData);
+  pdfStore.getProducts().then(products => {
+    if (products && products.length > 0) {
+      APP_STATE.products = products;
       SearchEngine.updateData(APP_STATE.products);
       updateDashboardStats();
-      console.log(`Loaded ${APP_STATE.products.length} products from localStorage cache.`);
-      return;
-    } catch (e) {
-      console.warn("Failed to load cached products. Fetching default CSV...", e);
+      console.log(`Loaded ${APP_STATE.products.length} products from IndexedDB cache.`);
+      triggerInputSearch();
+    } else {
+      // Legacy cache migration
+      const cachedData = localStorage.getItem(STORAGE_KEYS.PRODUCTS);
+      if (cachedData) {
+        try {
+          APP_STATE.products = JSON.parse(cachedData);
+          SearchEngine.updateData(APP_STATE.products);
+          updateDashboardStats();
+          // Save to IndexedDB for the future
+          pdfStore.saveProducts(APP_STATE.products).catch(e => console.error(e));
+          console.log(`Migrated legacy products cache from localStorage to IndexedDB.`);
+          triggerInputSearch();
+          return;
+        } catch (e) {
+          console.warn("Failed to load legacy products from localStorage:", e);
+        }
+      }
+      // Cache is empty. Fetch default bundled data.csv.
+      fetchBundledCsv();
     }
-  }
-  
-  // Cache is empty or corrupt. Fetch default bundled data.csv.
-  fetchBundledCsv();
+  }).catch(err => {
+    console.error("IndexedDB product load failed:", err);
+    fetchBundledCsv();
+  });
 }
 
 // Default fallback database (used when local data.csv fetch is blocked by browser CORS security)
@@ -420,8 +481,8 @@ function parseAndSaveCsv(csvText, sourceName) {
         APP_STATE.products = results.data;
         SearchEngine.updateData(APP_STATE.products);
         
-        // Cache to localStorage
-        localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(APP_STATE.products));
+        // Cache to IndexedDB instead of localStorage (avoid 5MB limit)
+        pdfStore.saveProducts(APP_STATE.products).catch(e => console.error("Failed to cache products to IndexedDB:", e));
         
         // Update sync timestamp
         const now = new Date();
@@ -604,8 +665,10 @@ function initializeUI() {
   document.getElementById('resetDbBtn').addEventListener('click', () => {
     if (confirm('ローカルキャッシュをクリアし、初期データベース(data.csv)に戻しますか？')) {
       localStorage.removeItem(STORAGE_KEYS.PRODUCTS);
-      fetchBundledCsv();
-      closeModal('settingsModal');
+      pdfStore.clearProducts().then(() => {
+        fetchBundledCsv();
+        closeModal('settingsModal');
+      }).catch(err => console.error(err));
     }
   });
 
@@ -1562,15 +1625,17 @@ function initializeMasterImportUI() {
         APP_STATE.config.masterSyncs = {};
         saveConfig();
 
-        pdfStore.clearAllPdfs().then(() => {
-          updateVideoUrlBadge();
-        }).catch(err => console.error(err));
+        pdfStore.clearProducts().then(() => {
+          pdfStore.clearAllPdfs().then(() => {
+            updateVideoUrlBadge();
+          }).catch(err => console.error(err));
 
-        updateMasterSyncBadges();
-        updateDashboardStats();
-        
-        showNotification('すべてのマスタデータを削除しました。初期データを読み込みます。');
-        fetchBundledCsv();
+          updateMasterSyncBadges();
+          updateDashboardStats();
+          
+          showNotification('すべてのマスタデータを削除しました。初期データを読み込みます。');
+          fetchBundledCsv();
+        }).catch(err => console.error(err));
       }
     });
   }
@@ -1660,11 +1725,12 @@ function initializeMasterImportUI() {
       });
 
       Promise.all(promises).then(() => {
-        localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(APP_STATE.products));
-        SearchEngine.updateData(APP_STATE.products);
-        updateVideoUrlBadge();
-        updateDashboardStats();
-        showNotification(`${processedCount}件の動画URLを個別に紐付け・インポートしました`);
+        pdfStore.saveProducts(APP_STATE.products).then(() => {
+          SearchEngine.updateData(APP_STATE.products);
+          updateVideoUrlBadge();
+          updateDashboardStats();
+          showNotification(`${processedCount}件の動画URLを個別に紐付け・インポートしました`);
+        }).catch(e => console.error("Failed to cache products:", e));
       });
     });
   }
@@ -2059,9 +2125,10 @@ function mergeMasterFile(masterType, csvText) {
         });
       }); // ends results.data.forEach
 
-      // Save merged database to localStorage
-      localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(APP_STATE.products));
-      SearchEngine.updateData(APP_STATE.products);
+      // Save merged database to IndexedDB instead of localStorage (avoid 5MB limit)
+      pdfStore.saveProducts(APP_STATE.products).then(() => {
+        SearchEngine.updateData(APP_STATE.products);
+      }).catch(e => console.error("Failed to cache products:", e));
 
       // Record Sync Log
       const now = new Date();
