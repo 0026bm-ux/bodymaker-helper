@@ -360,6 +360,11 @@ function loadStoredConfig() {
       console.error("Failed to parse config", e);
     }
   }
+  
+  // Set default fallback spreadsheet URL if not already configured
+  if (!APP_STATE.config.sheetUrl) {
+    APP_STATE.config.sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vRaIUnONmTlhTKF3npcbpGWX0UvXBDmyoamlGQsFtZpOT0CnvOPZiEOWmOQxKYvhqc_9J6300QYrYXA/pub?gid=0&single=true&output=csv';
+  }
 }
 
 // Load recently searched history
