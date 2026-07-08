@@ -493,7 +493,7 @@ function syncWithGoogleSheet() {
     })
     .catch(err => {
       console.error(err);
-      showNotification('Googleスプレッドシート同期エラー。公開設定を確認してください。', 'error');
+      showNotification('Googleスプレッドシート同期エラー: ' + (err.message || err), 'error');
     });
 }
 
