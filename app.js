@@ -453,18 +453,34 @@ function syncWithGoogleSheet() {
     return;
   }
 
-  // Extract spreadsheet ID
-  // Example: https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit?usp=sharing
-  const match = urlInput.match(/\/d\/([a-zA-Z0-9-_]+)/);
-  if (!match || !match[1]) {
-    showNotification('無効なGoogleスプレッドシートURLです。', 'error');
-    return;
+  let csvExportUrl = urlInput.trim();
+  
+  // If it's a standard edit/share URL, convert it to direct CSV export format
+  if (csvExportUrl.includes('/edit')) {
+    const match = csvExportUrl.match(/\/d\/([a-zA-Z0-9-_]+)/);
+    if (match && match[1]) {
+      const sheetId = match[1];
+      csvExportUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv`;
+    } else {
+      showNotification('無効なGoogleスプレッドシートURLです。', 'error');
+      return;
+    }
+  }
+  // If it's a "Publish to Web" URL but doesn't output CSV, convert it!
+  else if (csvExportUrl.includes('/d/e/2PACX-') && !csvExportUrl.includes('output=csv')) {
+    csvExportUrl = csvExportUrl.replace(/\/pubhtml$/, '/pub?output=csv')
+                               .replace(/\/pub$/, '/pub?output=csv');
+    // If it still doesn't have output=csv, append it
+    if (!csvExportUrl.includes('output=csv')) {
+      if (csvExportUrl.endsWith('/')) {
+        csvExportUrl += 'pub?output=csv';
+      } else if (!csvExportUrl.includes('/pub')) {
+        csvExportUrl += '/pub?output=csv';
+      }
+    }
   }
 
-  const sheetId = match[1];
-  const csvExportUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=csv`;
-
-  showNotification('同期中...', 'info');
+  showNotification('Googleスプレッドシートからデータを同期中...', 'info');
 
   fetch(csvExportUrl)
     .then(res => {
