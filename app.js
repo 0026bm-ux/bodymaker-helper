@@ -2003,6 +2003,7 @@ function mergeMasterFile(masterType, csvText) {
 
       let updatedCount = 0;
       let addedCount = 0;
+      let processedRowsCount = 0;
 
       // Helper to find existing products by SKU or JAN (exact, or by 5-char prefix if allowed)
       const findProductIndexes = (sku, jan, allowPrefixMatch = true) => {
@@ -2068,6 +2069,7 @@ function mergeMasterFile(masterType, csvText) {
         }
 
         if (!skuVal && !janVal) return; // skip row if no identifier
+        processedRowsCount++;
 
         const allowPrefix = !['nsMaster', 'setCompositionMaster'].includes(masterType);
         let idxs = findProductIndexes(skuVal, janVal, allowPrefix);
@@ -2250,7 +2252,7 @@ function mergeMasterFile(masterType, csvText) {
       const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
       if (!APP_STATE.config.masterSyncs) APP_STATE.config.masterSyncs = {};
       APP_STATE.config.masterSyncs[masterType] = {
-        rowCount: updatedCount,
+        rowCount: processedRowsCount,
         timestamp: timeStr
       };
       saveConfig();
@@ -2258,11 +2260,11 @@ function mergeMasterFile(masterType, csvText) {
       updateMasterSyncBadges();
       updateDashboardStats();
       
-      let countMsg = `${updatedCount}件の商品スペックを更新しました`;
+      let countMsg = `${processedRowsCount}件の商品データを更新しました`;
       if (masterType === 'nsMaster') {
-        countMsg = `${updatedCount}件更新、${addedCount}件新規追加しました`;
+        countMsg = `${processedRowsCount}件を処理し、内 ${addedCount}件を新規追加しました`;
       } else if (masterType === 'setCompositionMaster') {
-        countMsg = `${updatedCount}件のセット構成をインポートし、${addedCount}件のセット品を新規登録しました`;
+        countMsg = `${processedRowsCount}件のセット構成を処理し、内 ${addedCount}件のセット品を新規登録しました`;
       }
       showNotification(`同期完了: ${countMsg}`);
     },
