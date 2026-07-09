@@ -1845,7 +1845,7 @@ function exportDatabaseToCsv() {
     'サイズ', '重量', '送料区分', '梱包サイズ', '商品説明', '素材', 
     '耐荷重', '注意事項', '保証期間', '組立時間', '組立人数', 
     '関連商品', '取扱説明書PDF', '組立動画URL', '使用動画URL', '注意動画URL', '商品画像', 'isSetProduct', 'components', '店在庫',
-    'pkg_length', 'pkg_width', 'pkg_height', 'pkg_3side_sum', 'pkg_weight', 'pkg_volume', 'pkg_volume_weight'
+    'pkg_length', 'pkg_width', 'pkg_height', 'pkg_3side_sum', 'pkg_weight', 'pkg_volume', 'pkg_volume_weight', 'pkg_saitsu'
   ];
   
   // UTF-8 BOM
@@ -2177,13 +2177,23 @@ function mergeMasterFile(masterType, csvText) {
             product['保証期間'] = row['保証有無'] || row['保証期間'] || product['保証期間'] || '';
           } 
           else if (masterType === 'packageMaster') {
-            const lVal = (row['長（cm）'] || row['長'] || row['長(cm)'] || row['長さ'] || '').trim();
-            const wVal = (row['幅（cm）'] || row['幅'] || row['幅(cm)'] || '').trim();
-            const hVal = (row['高（cm）'] || row['高'] || row['高(cm)'] || row['高さ'] || '').trim();
+            // Headers are normalized by transformHeader, so try normalized keys first
+            const lVal = (row['長'] || row['長（cm）'] || row['長(cm)'] || row['長さ'] || '').trim();
+            const wVal = (row['幅'] || row['幅（cm）'] || row['幅(cm)'] || '').trim();
+            const hVal = (row['高'] || row['高（cm）'] || row['高(cm)'] || row['高さ'] || '').trim();
             const sumVal = (row['3辺合計'] || row['3辺合計（cm）'] || row['3辺合計(cm)'] || '').trim();
-            const kgVal = (row['重量ｋｇ'] || row['重量'] || row['重量kg'] || row['重量(kg)'] || row['重量（KG）'] || '').trim();
-            const volVal = (row['体積(？)'] || row['体積(?)'] || row['体積'] || row['体積(㎥)'] || row['体積(m3)'] || '').trim();
-            const convVal = (row['容積換算重量'] || '').trim();
+            const kgVal = (row['重量ｋｇ'] || row['重量ｋｇ（ＫＧ）'] || row['重量kg'] || row['重量(kg)'] || row['重量（KG）'] || row['重量'] || '').trim();
+            const volVal = (row['体積'] || row['体積(？)'] || row['体積(?)'] || row['体積（m3）'] || row['体積(㎥)'] || row['体積(m3)'] || '').trim();
+            const saitsuVal = (row['才数'] || '').trim();
+            
+            // Calculate Volume Weight using coefficient 6000
+            let convVal = '';
+            const lNum = parseFloat(lVal) || 0;
+            const wNum = parseFloat(wVal) || 0;
+            const hNum = parseFloat(hVal) || 0;
+            if (lNum > 0 && wNum > 0 && hNum > 0) {
+              convVal = ((lNum * wNum * hNum) / 6000).toFixed(2) + ' kg';
+            }
             
             product['pkg_length'] = lVal;
             product['pkg_width'] = wVal;
@@ -2192,6 +2202,7 @@ function mergeMasterFile(masterType, csvText) {
             product['pkg_weight'] = kgVal;
             product['pkg_volume'] = volVal;
             product['pkg_volume_weight'] = convVal;
+            product['pkg_saitsu'] = saitsuVal;
 
             if (wVal || lVal || hVal) {
               product['梱包サイズ'] = `幅${wVal}×奥行${lVal}×高さ${hVal}cm` + (kgVal ? ` (重量:${kgVal}kg)` : '');
