@@ -1260,14 +1260,76 @@ window.showProductDetails = function(sku) {
   document.getElementById('valWeight').innerText = getProductSpec(product, '重量') || '-';
   document.getElementById('valShipping').innerText = getProductSpec(product, '送料区分') || '-';
   
+  // Helper to parse package size fallback string if individual fields are empty
+  const parsePackageSizeFallback = (pkgStr) => {
+    if (!pkgStr) return null;
+    // Format: 幅69×奥行58×高さ13cm (重量:15.4kg) or similar
+    const regex = /幅\s*([\d.]+)\s*×\s*奥行\s*([\d.]+)\s*×\s*高さ\s*([\d.]+)\s*cm(?:\s*\(重量:\s*([\d.]+)\s*kg\))?/i;
+    const match = pkgStr.match(regex);
+    if (match) {
+      const w = parseFloat(match[1]) || 0;
+      const l = parseFloat(match[2]) || 0;
+      const h = parseFloat(match[3]) || 0;
+      const kg = match[4] ? parseFloat(match[4]) || 0 : 0;
+      
+      const sum = w + l + h;
+      const vol = (w * l * h) / 1000000; // in m^3
+      const volWeight = (w * l * h) / 6000;
+      
+      return {
+        length: String(l),
+        width: String(w),
+        height: String(h),
+        sum: sum > 0 ? String(sum) : '',
+        weight: kg > 0 ? String(kg) : '',
+        volume: vol > 0 ? vol.toFixed(3) : '',
+        volumeWeight: volWeight > 0 ? volWeight.toFixed(2) + ' kg' : ''
+      };
+    }
+    return null;
+  };
+
   // Detailed Packaging size binding (Request 1)
-  document.getElementById('valPkgLength').innerText = getProductSpec(product, 'pkg_length') || '-';
-  document.getElementById('valPkgWidth').innerText = getProductSpec(product, 'pkg_width') || '-';
-  document.getElementById('valPkgHeight').innerText = getProductSpec(product, 'pkg_height') || '-';
-  document.getElementById('valPkg3SideSum').innerText = getProductSpec(product, 'pkg_3side_sum') || '-';
-  document.getElementById('valPkgWeight').innerText = getProductSpec(product, 'pkg_weight') || '-';
-  document.getElementById('valPkgVolume').innerText = getProductSpec(product, 'pkg_volume') || '-';
-  document.getElementById('valPkgVolumeWeight').innerText = getProductSpec(product, 'pkg_volume_weight') || '-';
+  let lVal = getProductSpec(product, 'pkg_length');
+  let wVal = getProductSpec(product, 'pkg_width');
+  let hVal = getProductSpec(product, 'pkg_height');
+  let sumVal = getProductSpec(product, 'pkg_3side_sum');
+  let kgVal = getProductSpec(product, 'pkg_weight');
+  let volVal = getProductSpec(product, 'pkg_volume');
+  let convVal = getProductSpec(product, 'pkg_volume_weight');
+
+  // Fallback: parse from old "梱包サイズ" string if empty
+  if (!lVal && !wVal && !hVal) {
+    const oldPkgSize = getProductSpec(product, '梱包サイズ');
+    const parsed = parsePackageSizeFallback(oldPkgSize);
+    if (parsed) {
+      lVal = parsed.length;
+      wVal = parsed.width;
+      hVal = parsed.height;
+      sumVal = parsed.sum;
+      kgVal = parsed.weight;
+      volVal = parsed.volume;
+      convVal = parsed.volumeWeight;
+    }
+  }
+
+  // Calculate volume weight dynamically if missing
+  if (!convVal) {
+    const lNum = parseFloat(lVal) || 0;
+    const wNum = parseFloat(wVal) || 0;
+    const hNum = parseFloat(hVal) || 0;
+    if (lNum > 0 && wNum > 0 && hNum > 0) {
+      convVal = ((lNum * wNum * hNum) / 6000).toFixed(2) + ' kg';
+    }
+  }
+
+  document.getElementById('valPkgLength').innerText = lVal || '-';
+  document.getElementById('valPkgWidth').innerText = wVal || '-';
+  document.getElementById('valPkgHeight').innerText = hVal || '-';
+  document.getElementById('valPkg3SideSum').innerText = sumVal || '-';
+  document.getElementById('valPkgWeight').innerText = kgVal || '-';
+  document.getElementById('valPkgVolume').innerText = volVal || '-';
+  document.getElementById('valPkgVolumeWeight').innerText = convVal || '-';
 
   // Description
   document.getElementById('detailDesc').innerText = getProductSpec(product, '商品説明') || '商品説明はありません。';
@@ -1782,7 +1844,8 @@ function exportDatabaseToCsv() {
     '商品番号', 'JANコード', '商品名', '価格', '在庫数', 'カラー', 
     'サイズ', '重量', '送料区分', '梱包サイズ', '商品説明', '素材', 
     '耐荷重', '注意事項', '保証期間', '組立時間', '組立人数', 
-    '関連商品', '取扱説明書PDF', '組立動画URL', '使用動画URL', '注意動画URL', '商品画像', 'isSetProduct', 'components', '店在庫'
+    '関連商品', '取扱説明書PDF', '組立動画URL', '使用動画URL', '注意動画URL', '商品画像', 'isSetProduct', 'components', '店在庫',
+    'pkg_length', 'pkg_width', 'pkg_height', 'pkg_3side_sum', 'pkg_weight', 'pkg_volume', 'pkg_volume_weight'
   ];
   
   // UTF-8 BOM
