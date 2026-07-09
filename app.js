@@ -1290,36 +1290,109 @@ window.showProductDetails = function(sku) {
   };
 
   // Detailed Packaging size binding (Request 1)
-  let lVal = getProductSpec(product, 'pkg_length');
-  let wVal = getProductSpec(product, 'pkg_width');
-  let hVal = getProductSpec(product, 'pkg_height');
-  let sumVal = getProductSpec(product, 'pkg_3side_sum');
-  let kgVal = getProductSpec(product, 'pkg_weight');
-  let volVal = getProductSpec(product, 'pkg_volume');
-  let convVal = getProductSpec(product, 'pkg_volume_weight');
+  let lVal = '-';
+  let wVal = '-';
+  let hVal = '-';
+  let sumVal = '-';
+  let kgVal = '-';
+  let volVal = '-';
+  let convVal = '-';
 
-  // Fallback: parse from old "梱包サイズ" string if empty
-  if (!lVal && !wVal && !hVal) {
-    const oldPkgSize = getProductSpec(product, '梱包サイズ');
-    const parsed = parsePackageSizeFallback(oldPkgSize);
-    if (parsed) {
-      lVal = parsed.length;
-      wVal = parsed.width;
-      hVal = parsed.height;
-      sumVal = parsed.sum;
-      kgVal = parsed.weight;
-      volVal = parsed.volume;
-      convVal = parsed.volumeWeight;
+  if (isSet) {
+    // For set products: Sum weight, volume, and volume weight of all components (Request 2)
+    let totalWeight = 0;
+    let totalVolume = 0;
+    let totalVolumeWeight = 0;
+    let hasValidComponents = false;
+
+    const comps = product.components || [];
+    comps.forEach(c => {
+      const compProduct = SearchEngine.findById(c.sku);
+      if (compProduct) {
+        hasValidComponents = true;
+        const qty = parseInt(c.quantity || '1', 10) || 1;
+
+        // Get weight
+        let cWeightStr = getProductSpec(compProduct, 'pkg_weight');
+        // Get volume
+        let cVolStr = getProductSpec(compProduct, 'pkg_volume');
+        // Get volume weight
+        let cVolWeightStr = getProductSpec(compProduct, 'pkg_volume_weight');
+
+        // Parse fallback from 梱包サイズ if empty
+        let cL = getProductSpec(compProduct, 'pkg_length');
+        let cW = getProductSpec(compProduct, 'pkg_width');
+        let cH = getProductSpec(compProduct, 'pkg_height');
+
+        if (!cL && !cW && !cH) {
+          const parsed = parsePackageSizeFallback(getProductSpec(compProduct, '梱包サイズ'));
+          if (parsed) {
+            if (!cWeightStr) cWeightStr = parsed.weight;
+            if (!cVolStr) cVolStr = parsed.volume;
+            if (!cVolWeightStr) cVolWeightStr = parsed.volumeWeight;
+            cL = parsed.length;
+            cW = parsed.width;
+            cH = parsed.height;
+          }
+        }
+
+        const cWeight = parseFloat(cWeightStr) || 0;
+        const cVol = parseFloat(cVolStr) || 0;
+        
+        let cVolWeight = parseFloat(cVolWeightStr) || 0;
+        if (cVolWeight === 0) {
+          const lNum = parseFloat(cL) || 0;
+          const wNum = parseFloat(cW) || 0;
+          const hNum = parseFloat(cH) || 0;
+          if (lNum > 0 && wNum > 0 && hNum > 0) {
+            cVolWeight = (lNum * wNum * hNum) / 6000;
+          }
+        }
+
+        totalWeight += cWeight * qty;
+        totalVolume += cVol * qty;
+        totalVolumeWeight += cVolWeight * qty;
+      }
+    });
+
+    if (hasValidComponents) {
+      kgVal = totalWeight > 0 ? totalWeight.toFixed(2) : '-';
+      volVal = totalVolume > 0 ? totalVolume.toFixed(3) : '-';
+      convVal = totalVolumeWeight > 0 ? totalVolumeWeight.toFixed(2) + ' kg' : '-';
     }
-  }
+  } else {
+    // For normal products: Bind directly
+    lVal = getProductSpec(product, 'pkg_length');
+    wVal = getProductSpec(product, 'pkg_width');
+    hVal = getProductSpec(product, 'pkg_height');
+    sumVal = getProductSpec(product, 'pkg_3side_sum');
+    kgVal = getProductSpec(product, 'pkg_weight');
+    volVal = getProductSpec(product, 'pkg_volume');
+    convVal = getProductSpec(product, 'pkg_volume_weight');
 
-  // Calculate volume weight dynamically if missing
-  if (!convVal) {
-    const lNum = parseFloat(lVal) || 0;
-    const wNum = parseFloat(wVal) || 0;
-    const hNum = parseFloat(hVal) || 0;
-    if (lNum > 0 && wNum > 0 && hNum > 0) {
-      convVal = ((lNum * wNum * hNum) / 6000).toFixed(2) + ' kg';
+    // Fallback: parse from old "梱包サイズ" string if empty
+    if (!lVal && !wVal && !hVal) {
+      const oldPkgSize = getProductSpec(product, '梱包サイズ');
+      const parsed = parsePackageSizeFallback(oldPkgSize);
+      if (parsed) {
+        lVal = parsed.length;
+        wVal = parsed.width;
+        hVal = parsed.height;
+        sumVal = parsed.sum;
+        kgVal = parsed.weight;
+        volVal = parsed.volume;
+        convVal = parsed.volumeWeight;
+      }
+    }
+
+    // Calculate volume weight dynamically if missing
+    if (!convVal) {
+      const lNum = parseFloat(lVal) || 0;
+      const wNum = parseFloat(wVal) || 0;
+      const hNum = parseFloat(hVal) || 0;
+      if (lNum > 0 && wNum > 0 && hNum > 0) {
+        convVal = ((lNum * wNum * hNum) / 6000).toFixed(2) + ' kg';
+      }
     }
   }
 
