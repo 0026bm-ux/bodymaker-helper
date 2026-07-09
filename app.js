@@ -1108,12 +1108,28 @@ window.showProductDetails = function(sku) {
   document.getElementById('detailSku').innerText = product['商品番号'];
   
   // Stock count & badge coloring
-  const isSet = !!product.isSetProduct;
+  // Helper to inherit components from base SKU
+  const getProductComponents = (p) => {
+    if (p.components && p.components.length > 0) return p.components;
+    const itemSku = p['商品番号'] || '';
+    if (itemSku.length > 5) {
+      const basePrefix = itemSku.substring(0, 5).toLowerCase();
+      const baseProduct = APP_STATE.products.find(x => 
+        (x['商品番号'] || '').toLowerCase() === basePrefix
+      );
+      if (baseProduct && baseProduct.components && baseProduct.components.length > 0) {
+        return baseProduct.components;
+      }
+    }
+    return [];
+  };
+
+  const comps = getProductComponents(product);
+  const isSet = !!product.isSetProduct || comps.length > 0;
   let stockCount = 0;
   let calculatedSetStoreStock = {};
   
   if (isSet) {
-    const comps = product.components || [];
     let minSetsTotal = Infinity;
     const storeSets = {};
     let compsHtml = '';
@@ -1305,8 +1321,8 @@ window.showProductDetails = function(sku) {
     let totalVolumeWeight = 0;
     let hasValidComponents = false;
 
-    const comps = product.components || [];
-    comps.forEach(c => {
+    const setComps = getProductComponents(product);
+    setComps.forEach(c => {
       const compProduct = SearchEngine.findById(c.sku);
       if (compProduct) {
         hasValidComponents = true;
