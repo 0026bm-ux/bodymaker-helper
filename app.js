@@ -2145,6 +2145,21 @@ function mergeMasterFile(masterType, csvText) {
                 if (skuHasHyphen !== pHasHyphen) {
                   return; // do not match package codes with general product codes
                 }
+                
+                // If both contain a hyphen, they must represent the same package number!
+                if (skuHasHyphen && pHasHyphen) {
+                  const skuParts = skuLower.split('-');
+                  const pParts = pSku.split('-');
+                  if (skuParts[0] !== pParts[0]) {
+                    return; // prefix before hyphen must match exactly
+                  }
+                  const p1 = skuParts[1] || '';
+                  const p2 = pParts[1] || '';
+                  if (!p1.startsWith(p2) && !p2.startsWith(p1)) {
+                    return; // different packages (e.g. 1 vs 2)
+                  }
+                }
+                
                 indexes.push(idx);
                 return;
               }
