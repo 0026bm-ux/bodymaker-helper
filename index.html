@@ -14,7 +14,7 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
   
   <!-- Core Logic -->
-  <script src="app.js?v=1.3" defer></script>
+  <script src="app.js?v=1.4" defer></script>
 </head>
 <body>
 
@@ -260,14 +260,42 @@
           </svg>
           配送・梱包サイズ
         </h2>
-        <div class="spec-grid">
-          <div class="spec-item">
+        <div class="spec-grid" style="margin-bottom: 16px;">
+          <div class="spec-item" style="grid-column: 1 / -1;">
             <span class="spec-label">送料区分</span>
             <span class="spec-value large" id="valShipping">-</span>
           </div>
+        </div>
+        
+        <span class="spec-label" style="display:block; margin-bottom: 8px; font-weight: 700;">■ 梱包サイズ詳細</span>
+        <div class="spec-grid" id="detailPkgDimensionsGrid" style="grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));">
           <div class="spec-item">
-            <span class="spec-label">梱包サイズ</span>
-            <span class="spec-value" id="valPackageSize">-</span>
+            <span class="spec-label">長（cm）</span>
+            <span class="spec-value" id="valPkgLength">-</span>
+          </div>
+          <div class="spec-item">
+            <span class="spec-label">幅（cm）</span>
+            <span class="spec-value" id="valPkgWidth">-</span>
+          </div>
+          <div class="spec-item">
+            <span class="spec-label">高（cm）</span>
+            <span class="spec-value" id="valPkgHeight">-</span>
+          </div>
+          <div class="spec-item">
+            <span class="spec-label">3辺合計（cm）</span>
+            <span class="spec-value" id="valPkg3SideSum">-</span>
+          </div>
+          <div class="spec-item">
+            <span class="spec-label">重量（KG）</span>
+            <span class="spec-value" id="valPkgWeight">-</span>
+          </div>
+          <div class="spec-item">
+            <span class="spec-label">体積(㎥)</span>
+            <span class="spec-value" id="valPkgVolume">-</span>
+          </div>
+          <div class="spec-item">
+            <span class="spec-label">容積換算重量</span>
+            <span class="spec-value" id="valPkgVolumeWeight">-</span>
           </div>
         </div>
         

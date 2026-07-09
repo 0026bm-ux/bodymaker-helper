@@ -1086,12 +1086,21 @@ window.showProductDetails = function(sku) {
   }
 
   if (imgSrc) {
+    imgBox.style.height = '250px';
+    imgBox.style.padding = '0';
+    imgBox.style.border = 'none';
+    imgBox.style.backgroundColor = '#1a1a1a';
     imgBox.innerHTML = `<img src="${imgSrc}" class="detail-img" alt="${product['商品名']}" onerror="imgLoadError(this)">`;
   } else {
+    imgBox.style.height = 'auto';
+    imgBox.style.padding = '12px';
+    imgBox.style.border = '1px solid var(--color-border)';
+    imgBox.style.borderRadius = 'var(--radius-md)';
+    imgBox.style.backgroundColor = 'transparent';
     imgBox.innerHTML = `
-      <div class="detail-img-fallback">
-        <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/></svg>
-        <span>画像がありません</span>
+      <div class="detail-img-fallback" style="flex-direction: row; gap: 8px; justify-content: center; align-items: center; width: 100%;">
+        <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="width: 20px; height: 20px; stroke: var(--color-text-gray);"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/></svg>
+        <span style="color: var(--color-text-gray); font-size: 14px; font-weight: 500;">画像はありません</span>
       </div>`;
   }
 
@@ -1250,7 +1259,15 @@ window.showProductDetails = function(sku) {
   document.getElementById('valSize').innerText = getProductSpec(product, 'サイズ') || '-';
   document.getElementById('valWeight').innerText = getProductSpec(product, '重量') || '-';
   document.getElementById('valShipping').innerText = getProductSpec(product, '送料区分') || '-';
-  document.getElementById('valPackageSize').innerText = getProductSpec(product, '梱包サイズ') || '-';
+  
+  // Detailed Packaging size binding (Request 1)
+  document.getElementById('valPkgLength').innerText = getProductSpec(product, 'pkg_length') || '-';
+  document.getElementById('valPkgWidth').innerText = getProductSpec(product, 'pkg_width') || '-';
+  document.getElementById('valPkgHeight').innerText = getProductSpec(product, 'pkg_height') || '-';
+  document.getElementById('valPkg3SideSum').innerText = getProductSpec(product, 'pkg_3side_sum') || '-';
+  document.getElementById('valPkgWeight').innerText = getProductSpec(product, 'pkg_weight') || '-';
+  document.getElementById('valPkgVolume').innerText = getProductSpec(product, 'pkg_volume') || '-';
+  document.getElementById('valPkgVolumeWeight').innerText = getProductSpec(product, 'pkg_volume_weight') || '-';
 
   // Description
   document.getElementById('detailDesc').innerText = getProductSpec(product, '商品説明') || '商品説明はありません。';
@@ -1285,7 +1302,8 @@ window.showProductDetails = function(sku) {
       for (const [store, val] of Object.entries(calcStock)) {
         const num = val;
         const classText = num > 0 ? 'positive' : 'zero';
-        stockHtml += `<tr><td>${store}</td><td class="store-stock-val ${classText}">${num} 点</td></tr>`;
+        const displayVal = store.includes('オンライン価格') ? `${num.toLocaleString()} 円` : `${num} 点`;
+        stockHtml += `<tr><td>${store}</td><td class="store-stock-val ${classText}">${displayVal}</td></tr>`;
       }
       stockHtml += '</tbody></table></div>';
       storeStockContainer.innerHTML = stockHtml;
@@ -1299,7 +1317,8 @@ window.showProductDetails = function(sku) {
       for (const [store, val] of Object.entries(product['店在庫'])) {
         const num = parseInt(val, 10) || 0;
         const classText = num > 0 ? 'positive' : 'zero';
-        stockHtml += `<tr><td>${store}</td><td class="store-stock-val ${classText}">${num} 点</td></tr>`;
+        const displayVal = store.includes('オンライン価格') ? `${num.toLocaleString()} 円` : `${num} 点`;
+        stockHtml += `<tr><td>${store}</td><td class="store-stock-val ${classText}">${displayVal}</td></tr>`;
       }
       stockHtml += '</tbody></table></div>';
       storeStockContainer.innerHTML = stockHtml;
@@ -1441,10 +1460,15 @@ window.showProductDetails = function(sku) {
 window.imgLoadError = function(img) {
   img.style.display = 'none';
   const parent = img.parentElement;
+  parent.style.height = 'auto';
+  parent.style.padding = '12px';
+  parent.style.border = '1px solid var(--color-border)';
+  parent.style.borderRadius = 'var(--radius-md)';
+  parent.style.backgroundColor = 'transparent';
   parent.innerHTML = `
-    <div class="detail-img-fallback">
-      <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/></svg>
-      <span>画像を読み込めませんでした</span>
+    <div class="detail-img-fallback" style="flex-direction: row; gap: 8px; justify-content: center; align-items: center; width: 100%;">
+      <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="width: 20px; height: 20px; stroke: var(--color-text-gray);"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z"/></svg>
+      <span style="color: var(--color-text-gray); font-size: 14px; font-weight: 500;">画像を読み込めませんでした</span>
     </div>`;
 };
 
@@ -2090,12 +2114,24 @@ function mergeMasterFile(masterType, csvText) {
             product['保証期間'] = row['保証有無'] || row['保証期間'] || product['保証期間'] || '';
           } 
           else if (masterType === 'packageMaster') {
-            const w = (row['幅'] || row['幅 (cm)'] || '').trim();
-            const l = (row['長'] || row['長 (cm)'] || '').trim();
-            const h = (row['高'] || row['高 (cm)'] || '').trim();
-            const kg = (row['重量'] || row['重量 kg'] || '').trim();
-            if (w || l || h) {
-              product['梱包サイズ'] = `幅${w}×奥行${l}×高さ${h}cm` + (kg ? ` (重量:${kg}kg)` : '');
+            const lVal = (row['長（cm）'] || row['長'] || row['長(cm)'] || row['長さ'] || '').trim();
+            const wVal = (row['幅（cm）'] || row['幅'] || row['幅(cm)'] || '').trim();
+            const hVal = (row['高（cm）'] || row['高'] || row['高(cm)'] || row['高さ'] || '').trim();
+            const sumVal = (row['3辺合計'] || row['3辺合計（cm）'] || row['3辺合計(cm)'] || '').trim();
+            const kgVal = (row['重量ｋｇ'] || row['重量'] || row['重量kg'] || row['重量(kg)'] || row['重量（KG）'] || '').trim();
+            const volVal = (row['体積(？)'] || row['体積(?)'] || row['体積'] || row['体積(㎥)'] || row['体積(m3)'] || '').trim();
+            const convVal = (row['容積換算重量'] || '').trim();
+            
+            product['pkg_length'] = lVal;
+            product['pkg_width'] = wVal;
+            product['pkg_height'] = hVal;
+            product['pkg_3side_sum'] = sumVal;
+            product['pkg_weight'] = kgVal;
+            product['pkg_volume'] = volVal;
+            product['pkg_volume_weight'] = convVal;
+
+            if (wVal || lVal || hVal) {
+              product['梱包サイズ'] = `幅${wVal}×奥行${lVal}×高さ${hVal}cm` + (kgVal ? ` (重量:${kgVal}kg)` : '');
             }
           } 
           else if (masterType === 'capacityMaster') {
