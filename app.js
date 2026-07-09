@@ -550,7 +550,7 @@ function syncWithGoogleSheet() {
 
   fetch(csvExportUrl)
     .then(res => {
-      if (!res.ok) throw new Error('スプレッドシートのダウンロードに失敗しました。');
+      if (!res.ok) throw new Error(`スプレッドシートのダウンロードに失敗しました。(HTTPステータス: ${res.status})`);
       return res.text();
     })
     .then(csvText => {
@@ -559,7 +559,7 @@ function syncWithGoogleSheet() {
     })
     .catch(err => {
       console.error(err);
-      showNotification('Googleスプレッドシート同期エラー: ' + (err.message || err), 'error');
+      showNotification(`Googleスプレッドシート同期エラー: ${err.message || err}\n入力されたURL: ${csvExportUrl}`, 'error');
     });
 }
 
