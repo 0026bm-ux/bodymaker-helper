@@ -1052,6 +1052,10 @@ window.showProductDetails = function(sku) {
   const getProductSpec = (p, specKey) => {
     if (p[specKey]) return p[specKey];
     const itemSku = p['商品番号'] || '';
+    // Package variants (containing '-') do not inherit specifications from the general base product code
+    if (itemSku.includes('-')) {
+      return '';
+    }
     if (itemSku.length > 5) {
       const basePrefix = itemSku.substring(0, 5).toLowerCase();
       const baseProduct = APP_STATE.products.find(x => 
@@ -1062,6 +1066,26 @@ window.showProductDetails = function(sku) {
       }
     }
     return '';
+  };
+
+  // Helper to find component product in database, allowing fallback mapping (e.g. TM0664-1 matches TM0664-1MB)
+  const findComponentProduct = (skuVal) => {
+    if (!skuVal) return null;
+    const skuLower = skuVal.toLowerCase();
+    
+    // 1. Try exact match first
+    let found = APP_STATE.products.find(p => 
+      (p['商品番号'] || '').toLowerCase() === skuLower
+    );
+    if (found) return found;
+    
+    // 2. Try suffix/extension match (e.g. TM0664-1 matches TM0664-1MB)
+    found = APP_STATE.products.find(p => 
+      (p['商品番号'] || '').toLowerCase().startsWith(skuLower)
+    );
+    if (found) return found;
+    
+    return null;
   };
 
   APP_STATE.currentProductId = sku;
@@ -1135,7 +1159,7 @@ window.showProductDetails = function(sku) {
     let compsHtml = '';
     
     comps.forEach(c => {
-      const compProduct = SearchEngine.findById(c.sku) || {
+      const compProduct = findComponentProduct(c.sku) || {
         '商品名': c.name || '不明な商品',
         '商品番号': c.sku,
         '価格': '0',
@@ -1244,8 +1268,8 @@ window.showProductDetails = function(sku) {
   document.getElementById('detailTitle').innerText = product['商品名'] || '未設定';
   
   if (isSet && !product['価格']) {
-    const calculatedPrice = (product.components || []).reduce((sum, c) => {
-      const compProduct = SearchEngine.findById(c.sku) || { '価格': '0' };
+    const calculatedPrice = getProductComponents(product).reduce((sum, c) => {
+      const compProduct = findComponentProduct(c.sku) || { '価格': '0' };
       return sum + (parseInt(compProduct['価格'] || '0', 10) * parseInt(c.quantity || '1', 10));
     }, 0);
     document.getElementById('detailPriceVal').innerText = calculatedPrice.toLocaleString();
@@ -1323,7 +1347,7 @@ window.showProductDetails = function(sku) {
 
     const setComps = getProductComponents(product);
     setComps.forEach(c => {
-      const compProduct = SearchEngine.findById(c.sku);
+      const compProduct = findComponentProduct(c.sku);
       if (compProduct) {
         hasValidComponents = true;
         const qty = parseInt(c.quantity || '1', 10) || 1;
