@@ -2027,16 +2027,23 @@ function mergeMasterFile(masterType, csvText) {
               
               // Prefix 5-char match: only if both SKUs are at least 5 chars long!
               if (skuLower.length >= 5 && pSku.length >= 5 && pSkuPrefix5 === skuPrefix5) {
+                const skuHasHyphen = skuLower.includes('-');
+                const pHasHyphen = pSku.includes('-');
+                if (skuHasHyphen !== pHasHyphen) {
+                  return; // do not match package codes with general product codes
+                }
                 indexes.push(idx);
                 return;
               }
               
               // Substring match: if one of them is exactly 5 characters and is a prefix of the other!
               if (skuLower.length === 5 && pSku.startsWith(skuLower)) {
+                if (pSku.includes('-')) return; // do not match base product to package variant
                 indexes.push(idx);
                 return;
               }
               if (pSku.length === 5 && skuLower.startsWith(pSku)) {
+                if (skuLower.includes('-')) return; // do not match base product to package variant
                 indexes.push(idx);
                 return;
               }
