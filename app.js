@@ -551,7 +551,8 @@ function syncWithGoogleSheet() {
 
   showNotification('Googleスプレッドシートからデータを同期中...', 'info');
 
-  fetch(csvExportUrl)
+  const cacheBusterUrl = csvExportUrl + (csvExportUrl.includes('?') ? '&' : '?') + '_t=' + Date.now();
+  fetch(cacheBusterUrl)
     .then(res => {
       if (!res.ok) throw new Error(`スプレッドシートのダウンロードに失敗しました。(HTTPステータス: ${res.status})`);
       return res.text();
