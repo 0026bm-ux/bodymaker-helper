@@ -1367,7 +1367,7 @@ window.showProductDetails = function(sku) {
         let cW = getProductSpec(compProduct, 'pkg_width');
         let cH = getProductSpec(compProduct, 'pkg_height');
 
-        if (!cL && !cW && !cH) {
+        if ((!cL || cL === '-') && (!cW || cW === '-') && (!cH || cH === '-')) {
           const parsed = parsePackageSizeFallback(getProductSpec(compProduct, '梱包サイズ'));
           if (parsed) {
             if (!cWeightStr) cWeightStr = parsed.weight;
@@ -1413,8 +1413,8 @@ window.showProductDetails = function(sku) {
     volVal = getProductSpec(product, 'pkg_volume');
     convVal = getProductSpec(product, 'pkg_volume_weight');
 
-    // Fallback: parse from old "梱包サイズ" string if empty
-    if (!lVal && !wVal && !hVal) {
+    // Fallback: parse from old "梱包サイズ" string if empty or '-'
+    if ((!lVal || lVal === '-') && (!wVal || wVal === '-') && (!hVal || hVal === '-')) {
       const oldPkgSize = getProductSpec(product, '梱包サイズ');
       const parsed = parsePackageSizeFallback(oldPkgSize);
       if (parsed) {
@@ -1428,8 +1428,8 @@ window.showProductDetails = function(sku) {
       }
     }
 
-    // Calculate volume weight dynamically if missing
-    if (!convVal) {
+    // Calculate volume weight dynamically if missing or '-'
+    if (!convVal || convVal === '-') {
       const lNum = parseFloat(lVal) || 0;
       const wNum = parseFloat(wVal) || 0;
       const hNum = parseFloat(hVal) || 0;
