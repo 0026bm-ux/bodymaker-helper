@@ -1357,13 +1357,10 @@ window.showProductDetails = function(sku) {
 
         // Get weight
         let cWeightStr = getProductSpec(compProduct, 'pkg_weight');
-        if (cWeightStr === '-') cWeightStr = '';
         // Get volume
         let cVolStr = getProductSpec(compProduct, 'pkg_volume');
-        if (cVolStr === '-') cVolStr = '';
         // Get volume weight
         let cVolWeightStr = getProductSpec(compProduct, 'pkg_volume_weight');
-        if (cVolWeightStr === '-') cVolWeightStr = '';
 
         // Parse fallback from 梱包サイズ if empty
         let cL = getProductSpec(compProduct, 'pkg_length');
@@ -1373,9 +1370,9 @@ window.showProductDetails = function(sku) {
         if ((!cL || cL === '-') && (!cW || cW === '-') && (!cH || cH === '-')) {
           const parsed = parsePackageSizeFallback(getProductSpec(compProduct, '梱包サイズ'));
           if (parsed) {
-            if (!cWeightStr || cWeightStr === '-') cWeightStr = parsed.weight;
-            if (!cVolStr || cVolStr === '-') cVolStr = parsed.volume;
-            if (!cVolWeightStr || cVolWeightStr === '-') cVolWeightStr = parsed.volumeWeight;
+            if (!cWeightStr) cWeightStr = parsed.weight;
+            if (!cVolStr) cVolStr = parsed.volume;
+            if (!cVolWeightStr) cVolWeightStr = parsed.volumeWeight;
             cL = parsed.length;
             cW = parsed.width;
             cH = parsed.height;
