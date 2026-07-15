@@ -482,8 +482,9 @@ function parseAndSaveCsv(csvText, sourceName) {
               console.warn("Failed to parse components JSON:", e);
             }
           }
-          if (p['isSetProduct'] === 'true') p.isSetProduct = true;
-          if (p['isSetProduct'] === 'false') p.isSetProduct = false;
+          const isSetVal = String(p['isSetProduct'] || '').toLowerCase().trim();
+          if (isSetVal === 'true') p.isSetProduct = true;
+          if (isSetVal === 'false') p.isSetProduct = false;
         });
 
         APP_STATE.products = results.data;
@@ -1106,7 +1107,7 @@ window.showProductDetails = function(sku) {
   // Image
   const imgBox = document.getElementById('detailImgBox');
   let imgSrc = getProductSpec(product, '商品画像');
-  if (!imgSrc && !!product.isSetProduct && product.components && product.components.length > 0) {
+  if (!imgSrc && (product.isSetProduct === true || String(product.isSetProduct).toLowerCase() === 'true') && product.components && product.components.length > 0) {
     const firstComp = SearchEngine.findById(product.components[0].sku);
     if (firstComp && firstComp['商品画像']) {
       imgSrc = firstComp['商品画像'];
@@ -1153,7 +1154,7 @@ window.showProductDetails = function(sku) {
   };
 
   const comps = getProductComponents(product);
-  const isSet = !!product.isSetProduct || comps.length > 0;
+  const isSet = (product.isSetProduct === true || String(product.isSetProduct).toLowerCase() === 'true') || comps.length > 0;
   let stockCount = 0;
   let calculatedSetStoreStock = {};
   
