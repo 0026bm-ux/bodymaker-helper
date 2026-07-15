@@ -1449,9 +1449,6 @@ window.showProductDetails = function(sku) {
   document.getElementById('valPkgVolume').innerText = volVal || '-';
   document.getElementById('valPkgVolumeWeight').innerText = convVal || '-';
 
-  // Output raw data debug string to help diagnose columns/keys in the database
-  document.getElementById('debugInfo').innerText = `[DEBUG] SKU: "${product['商品番号'] || ''}" | pkg_length: "${product['pkg_length'] || ''}" | 梱包サイズ: "${product['梱包サイズ'] || ''}" | Keys: ${JSON.stringify(Object.keys(product))}`;
-
   // Description
   document.getElementById('detailDesc').innerText = getProductSpec(product, '商品説明') || '商品説明はありません。';
 
