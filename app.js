@@ -461,6 +461,9 @@ function parseAndSaveCsv(csvText, sourceName) {
   Papa.parse(csvText, {
     header: true,
     skipEmptyLines: true,
+    transformHeader: function(h) {
+      return normalizeHeader(h);
+    },
     complete: function(results) {
       if (results.data && results.data.length > 0) {
         // Parse JSON strings back to objects
@@ -1303,8 +1306,8 @@ window.showProductDetails = function(sku) {
   // Helper to parse package size fallback string if individual fields are empty
   const parsePackageSizeFallback = (pkgStr) => {
     if (!pkgStr) return null;
-    // Format: 幅69×奥行58×高さ13cm (重量:15.4kg) or similar
-    const regex = /幅\s*([\d.]+)\s*×\s*奥行\s*([\d.]+)\s*×\s*高さ\s*([\d.]+)\s*cm(?:\s*\(重量:\s*([\d.]+)\s*kg\))?/i;
+    // Format: 幅69×奥行58×高さ13cm (重量:15.4kg) or similar, supporting multiple separator formats
+    const regex = /幅\s*([\d.]+)\s*[×xX*ｘ\s]\s*奥行\s*([\d.]+)\s*[×xX*ｘ\s]\s*高さ\s*([\d.]+)\s*cm(?:\s*[\(（]\s*重量[\s:：]*([\d.]+)\s*kg\s*[\)）])?/i;
     const match = pkgStr.match(regex);
     if (match) {
       const w = parseFloat(match[1]) || 0;
