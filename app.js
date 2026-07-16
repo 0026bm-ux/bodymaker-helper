@@ -466,7 +466,7 @@ function parseAndSaveCsv(csvText, sourceName) {
     },
     complete: function(results) {
       if (results.data && results.data.length > 0) {
-        // Parse JSON strings back to objects
+        // Parse JSON strings back to objects, and extract multiple videos
         results.data.forEach(p => {
           if (p['店在庫'] && typeof p['店在庫'] === 'string' && p['店在庫'].trim().startsWith('{')) {
             try {
@@ -485,6 +485,41 @@ function parseAndSaveCsv(csvText, sourceName) {
           const isSetVal = String(p['isSetProduct'] || '').toLowerCase().trim();
           if (isSetVal === 'true') p.isSetProduct = true;
           if (isSetVal === 'false') p.isSetProduct = false;
+
+          // Parse multiple URLs from spreadsheet columns
+          const rawAssembly = p['組立動画URL'] || '';
+          const rawUsage = p['使用動画URL'] || '';
+          const rawCaution = p['注意動画URL'] || '';
+          
+          const parsedVideos = [];
+          
+          const parseUrls = (rawVal, defaultLabel) => {
+            if (!rawVal) return;
+            const items = rawVal.split(/[\n,;、\uff0c\uff1b]+/).map(u => u.trim()).filter(Boolean);
+            
+            let labelCounter = 1;
+            items.forEach(item => {
+              const match = item.match(/^([^:：]+)\s*[:：]\s*(.+)$/);
+              if (match) {
+                parsedVideos.push({
+                  title: match[1].trim(),
+                  url: match[2].trim()
+                });
+              } else {
+                if (items.length === 1) {
+                  parsedVideos.push({ title: defaultLabel, url: item });
+                } else {
+                  parsedVideos.push({ title: `${defaultLabel}${labelCounter++}`, url: item });
+                }
+              }
+            });
+          };
+          
+          parseUrls(rawAssembly, '組立動画');
+          parseUrls(rawUsage, '使用動画');
+          parseUrls(rawCaution, '注意動画');
+          
+          p.videos = parsedVideos;
         });
 
         APP_STATE.products = results.data;
