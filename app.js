@@ -1542,10 +1542,12 @@ window.showProductDetails = function(sku) {
   const manualVideoContainer = document.getElementById('manualVideoContainer');
 
   const updateManualSection = (hasPdf, pdfUrl, pdfName, clickAction) => {
+    const assemblyVideo = getProductSpec(product, '組立動画URL');
     const usageVideo = getProductSpec(product, '使用動画URL');
+    const cautionVideo = getProductSpec(product, '注意動画URL');
     
-    // Check if we have PDF or Video
-    if (hasPdf || usageVideo) {
+    // Check if we have PDF or any Video
+    if (hasPdf || assemblyVideo || usageVideo || cautionVideo) {
       manualSection.style.display = 'block';
     } else {
       manualSection.style.display = 'none';
@@ -1560,9 +1562,20 @@ window.showProductDetails = function(sku) {
       manualBox.style.display = 'none';
     }
 
-    // Video container setup (Render explanation video in manual tab!)
+    // Video container setup (Render explanation/assembly/caution videos in manual tab!)
+    let manualVideoHtml = '';
+    if (assemblyVideo) {
+      manualVideoHtml += renderVideoElement('組立説明動画', assemblyVideo);
+    }
     if (usageVideo) {
-      manualVideoContainer.innerHTML = renderVideoElement('取扱・説明動画', usageVideo);
+      manualVideoHtml += renderVideoElement('取扱・説明動画', usageVideo);
+    }
+    if (cautionVideo) {
+      manualVideoHtml += renderVideoElement('注意事項説明動画', cautionVideo);
+    }
+
+    if (manualVideoHtml) {
+      manualVideoContainer.innerHTML = manualVideoHtml;
       manualVideoContainer.style.display = 'block';
     } else {
       manualVideoContainer.innerHTML = '';
