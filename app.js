@@ -2438,6 +2438,12 @@ function mergeMasterFile(masterType, csvText) {
             if (usageUrl) product['使用動画URL'] = usageUrl;
             if (cautionUrl) product['注意動画URL'] = cautionUrl;
             if (imgUrl) product['商品画像'] = imgUrl;
+
+            console.log(`[videoMaster Import] SKU in row: "${skuVal}" | Matched database products: ${idxs.length} items. Updated values for this product (SKU: ${product['商品番号']}):`, {
+              '組立動画URL': product['組立動画URL'],
+              '使用動画URL': product['使用動画URL'],
+              '注意動画URL': product['注意動画URL']
+            });
           }
         });
       }); // ends results.data.forEach
