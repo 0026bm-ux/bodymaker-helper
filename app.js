@@ -2545,13 +2545,35 @@ function mergeMasterFile(masterType, csvText) {
                 });
               }
               
-              // Also sync to flat fields for backwards compatibility
+              // Also sync to flat fields as comma-separated list for export (Request 8)
+              const itemToAdd = genericUrl || parsedUrl;
               if (label.includes('組立動画') || label.includes('組立')) {
-                product['組立動画URL'] = parsedUrl;
+                if (product['組立動画URL']) {
+                  const existingList = product['組立動画URL'].split(/[\n,;、\uff0c\uff1b]+/).map(u => u.trim()).filter(Boolean);
+                  if (!existingList.includes(itemToAdd)) {
+                    product['組立動画URL'] = existingList.join(', ') + ', ' + itemToAdd;
+                  }
+                } else {
+                  product['組立動画URL'] = itemToAdd;
+                }
               } else if (label.includes('使用動画') || label.includes('説明動画') || label.includes('紹介') || label.includes('使用')) {
-                product['使用動画URL'] = parsedUrl;
+                if (product['使用動画URL']) {
+                  const existingList = product['使用動画URL'].split(/[\n,;、\uff0c\uff1b]+/).map(u => u.trim()).filter(Boolean);
+                  if (!existingList.includes(itemToAdd)) {
+                    product['使用動画URL'] = existingList.join(', ') + ', ' + itemToAdd;
+                  }
+                } else {
+                  product['使用動画URL'] = itemToAdd;
+                }
               } else if (label.includes('注意') || label.includes('警告')) {
-                product['注意動画URL'] = parsedUrl;
+                if (product['注意動画URL']) {
+                  const existingList = product['注意動画URL'].split(/[\n,;、\uff0c\uff1b]+/).map(u => u.trim()).filter(Boolean);
+                  if (!existingList.includes(itemToAdd)) {
+                    product['注意動画URL'] = existingList.join(', ') + ', ' + itemToAdd;
+                  }
+                } else {
+                  product['注意動画URL'] = itemToAdd;
+                }
               }
             }
             
