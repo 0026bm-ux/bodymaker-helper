@@ -1456,6 +1456,9 @@ window.showProductDetails = function(sku) {
   document.getElementById('valMaterials').innerText = getProductSpec(product, '素材') || '-';
   document.getElementById('valCapacity').innerText = getProductSpec(product, '耐荷重') || '-';
   
+  // Debug Info
+  document.getElementById('debugInfo').innerText = `[DEBUG] SKU: ${product['商品番号']} | 組立動画URL: "${product['組立動画URL'] || ''}" | 使用動画URL: "${product['使用動画URL'] || ''}" | 注意動画URL: "${product['注意動画URL'] || ''}"`;
+  
   // Precautions bullet items
   const cautionList = document.getElementById('detailCaution');
   const cautionText = getProductSpec(product, '注意事項') || '';
