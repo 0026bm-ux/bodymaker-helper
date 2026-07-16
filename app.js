@@ -1542,78 +1542,85 @@ window.showProductDetails = function(sku) {
   // Manual PDF Links (Check IndexedDB first, then fallback to URL)
   const manualSection = document.getElementById('manual');
   const manualBox = document.getElementById('detailManualBox');
-  const manualVideoContainer = document.getElementById('manualVideoContainer');
 
   const updateManualSection = (hasPdf, pdfUrl, pdfName, clickAction) => {
-    const assemblyVideo = getProductSpec(product, '組立動画URL');
-    const usageVideo = getProductSpec(product, '使用動画URL');
-    const cautionVideo = getProductSpec(product, '注意動画URL');
-    
-    // Check if we have PDF or any Video
-    if (hasPdf || assemblyVideo || usageVideo || cautionVideo) {
-      manualSection.style.display = 'block';
-    } else {
-      manualSection.style.display = 'none';
-    }
-
-    // PDF box setup
     if (hasPdf) {
+      manualSection.style.display = 'block';
       manualBox.style.display = 'flex';
       manualBox.onclick = clickAction;
       manualBox.querySelector('.link-box-title').innerText = pdfName;
     } else {
+      manualSection.style.display = 'none';
       manualBox.style.display = 'none';
-    }
-
-    // Video container setup (Render explanation/assembly/caution videos in manual tab!)
-    let manualVideoHtml = '';
-    if (assemblyVideo) {
-      manualVideoHtml += renderVideoElement('組立説明動画', assemblyVideo);
-    }
-    if (usageVideo) {
-      manualVideoHtml += renderVideoElement('取扱・説明動画', usageVideo);
-    }
-    if (cautionVideo) {
-      manualVideoHtml += renderVideoElement('注意事項説明動画', cautionVideo);
-    }
-
-    if (manualVideoHtml) {
-      manualVideoContainer.innerHTML = manualVideoHtml;
-      manualVideoContainer.style.display = 'block';
-    } else {
-      manualVideoContainer.innerHTML = '';
-      manualVideoContainer.style.display = 'none';
     }
   };
 
+  // Helper to show/hide tab buttons dynamically based on availability of data
+  const updateTabButtonsVisibility = (hasPdf, hasVideo, hasRelated) => {
+    const tabBtnManual = document.getElementById('tabBtnManual');
+    const tabBtnVideo = document.getElementById('tabBtnVideo');
+    const tabBtnRelated = document.getElementById('tabBtnRelated');
+    
+    if (tabBtnManual) tabBtnManual.style.display = hasPdf ? 'inline-block' : 'none';
+    if (tabBtnVideo) tabBtnVideo.style.display = hasVideo ? 'inline-block' : 'none';
+    if (tabBtnRelated) tabBtnRelated.style.display = hasRelated ? 'inline-block' : 'none';
+  };
+
+  const assemblyVideo = getProductSpec(product, '組立動画URL');
+  const usageVideo = getProductSpec(product, '使用動画URL');
+  const cautionVideo = getProductSpec(product, '注意動画URL');
+  const hasVideo = !!(assemblyVideo || usageVideo || cautionVideo);
+
+  const getHasRelated = () => {
+    const relatedSkus = product['関連商品'];
+    if (!relatedSkus) return false;
+    const skuArray = relatedSkus.split(',').map(s => s.trim()).filter(Boolean);
+    return skuArray.some(relSku => SearchEngine.findById(relSku) !== undefined);
+  };
+  const hasRelated = getHasRelated();
+
   pdfStore.getPdf(product['商品番号']).then(record => {
+    let hasPdf = false;
+    let pdfUrl = '';
+    let pdfName = '';
+    let clickAction = null;
+
     if (record && record.blob) {
-      const localUrl = URL.createObjectURL(record.blob);
-      updateManualSection(true, localUrl, record.fileName || '取扱説明書・組立説明書 (ローカル保存)', () => window.open(localUrl, '_blank'));
+      hasPdf = true;
+      pdfUrl = URL.createObjectURL(record.blob);
+      pdfName = record.fileName || '取扱説明書・組立説明書 (ローカル保存)';
+      clickAction = () => window.open(pdfUrl, '_blank');
     } else {
-      const pdfUrl = getProductSpec(product, '取扱説明書PDF');
-      if (pdfUrl) {
-        updateManualSection(true, pdfUrl, '取扱説明書・組立説明書.pdf', () => window.open(pdfUrl, '_blank'));
-      } else {
-        updateManualSection(false, '', '', null);
+      const url = getProductSpec(product, '取扱説明書PDF');
+      if (url) {
+        hasPdf = true;
+        pdfUrl = url;
+        pdfName = '取扱説明書・組立説明書.pdf';
+        clickAction = () => window.open(pdfUrl, '_blank');
       }
     }
+    updateManualSection(hasPdf, pdfUrl, pdfName, clickAction);
+    updateTabButtonsVisibility(hasPdf, hasVideo, hasRelated);
   }).catch(err => {
     console.error("Failed to read IndexedDB PDF:", err);
-    const pdfUrl = getProductSpec(product, '取扱説明書PDF');
-    if (pdfUrl) {
-      updateManualSection(true, pdfUrl, '取扱説明書・組立説明書.pdf', () => window.open(pdfUrl, '_blank'));
-    } else {
-      updateManualSection(false, '', '', null);
+    let hasPdf = false;
+    let pdfUrl = '';
+    let pdfName = '';
+    let clickAction = null;
+
+    const url = getProductSpec(product, '取扱説明書PDF');
+    if (url) {
+      hasPdf = true;
+      pdfUrl = url;
+      pdfName = '取扱説明書・組立説明書.pdf';
+      clickAction = () => window.open(pdfUrl, '_blank');
     }
+    updateManualSection(hasPdf, pdfUrl, pdfName, clickAction);
+    updateTabButtonsVisibility(hasPdf, hasVideo, hasRelated);
   });
 
   // Video embeds
   const videoSection = document.getElementById('detailVideoSection');
-  const assemblyVideo = getProductSpec(product, '組立動画URL');
-  const usageVideo = getProductSpec(product, '使用動画URL');
-  const cautionVideo = getProductSpec(product, '注意動画URL');
-
   let videoHtml = '';
   videoHtml += renderVideoElement('組立説明動画', assemblyVideo);
   videoHtml += renderVideoElement('使用イメージ・紹介動画', usageVideo);

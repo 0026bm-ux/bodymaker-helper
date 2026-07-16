@@ -14,7 +14,7 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
   
   <!-- Core Logic -->
-  <script src="app.js?v=3.5" defer></script>
+  <script src="app.js?v=3.6" defer></script>
 </head>
 <body>
 
@@ -46,7 +46,7 @@
             <span class="logo-text">商品情報検索</span>
             <span class="logo-tag">社内用</span>
           </div>
-          <span style="font-size: 10px; color: var(--color-text-gray); display: block; margin-top: 1px;">Store Assist System v3.5</span>
+          <span style="font-size: 10px; color: var(--color-text-gray); display: block; margin-top: 1px;">Store Assist System v3.6</span>
         </div>
       </div>
       <div style="display: flex; gap: 8px;">
@@ -166,7 +166,7 @@
         <button class="tab-btn active" data-target="info">商品情報</button>
         <button class="tab-btn" data-target="stock">在庫情報</button>
         <button class="tab-btn" data-target="assembly">組立・仕様</button>
-        <button class="tab-btn" data-target="manual">説明書</button>
+        <button class="tab-btn" id="tabBtnManual" data-target="manual">説明書</button>
         <button class="tab-btn" id="tabBtnVideo" data-target="video">動画</button>
         <button class="tab-btn" id="tabBtnRelated" data-target="related">関連商品</button>
       </div>
@@ -369,7 +369,6 @@
             </svg>
           </span>
         </div>
-        <div id="manualVideoContainer" style="margin-top: 12px; display: none;"></div>
       </div>
 
       <!-- 5. Product Videos (Anchor target 'video') -->
