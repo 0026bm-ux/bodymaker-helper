@@ -1483,9 +1483,14 @@ window.showProductDetails = function(sku) {
   // Debug Info
   const debugInfo = document.getElementById('debugInfo');
   if (debugInfo) {
-    debugInfo.style.display = 'block';
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('debug') === '1' || window.location.hash === '#debug') {
+      debugInfo.style.display = 'block';
+    } else {
+      debugInfo.style.display = 'none';
+    }
     const videosStr = product.videos ? JSON.stringify(product.videos) : 'undefined';
-    debugInfo.innerText = `[DEBUG v3.10] SKU: ${product['商品番号']} | videos array: ${videosStr} | 組立動画URL: "${product['組立動画URL'] || ''}" | 使用動画URL: "${product['使用動画URL'] || ''}"`;
+    debugInfo.innerText = `[DEBUG v3.11] SKU: ${product['商品番号']} | videos array: ${videosStr} | 組立動画URL: "${product['組立動画URL'] || ''}" | 使用動画URL: "${product['使用動画URL'] || ''}"`;
   }
   
   // Precautions bullet items
