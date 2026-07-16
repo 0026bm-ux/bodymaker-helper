@@ -1073,6 +1073,30 @@ window.showProductDetails = function(sku) {
     return '';
   };
 
+  // Helper to fallback to base SKU (first 5 chars) if variant videos are empty
+  const getProductVideos = (p) => {
+    if (p.videos && p.videos.length > 0) return p.videos;
+    const itemSku = p['商品番号'] || '';
+    if (itemSku.includes('-')) {
+      const basePrefix = itemSku.split('-')[0].substring(0, 5).toLowerCase();
+      const baseProduct = APP_STATE.products.find(x => 
+        (x['商品番号'] || '').toLowerCase() === basePrefix
+      );
+      if (baseProduct && baseProduct.videos && baseProduct.videos.length > 0) {
+        return baseProduct.videos;
+      }
+    } else if (itemSku.length > 5) {
+      const basePrefix = itemSku.substring(0, 5).toLowerCase();
+      const baseProduct = APP_STATE.products.find(x => 
+        (x['商品番号'] || '').toLowerCase() === basePrefix
+      );
+      if (baseProduct && baseProduct.videos && baseProduct.videos.length > 0) {
+        return baseProduct.videos;
+      }
+    }
+    return [];
+  };
+
   // Helper to find component product in database, allowing fallback mapping (e.g. TM0664-1 matches TM0664-1MB)
   const findComponentProduct = (skuVal) => {
     if (!skuVal) return null;
@@ -1569,7 +1593,8 @@ window.showProductDetails = function(sku) {
   const assemblyVideo = getProductSpec(product, '組立動画URL');
   const usageVideo = getProductSpec(product, '使用動画URL');
   const cautionVideo = getProductSpec(product, '注意動画URL');
-  const hasVideo = !!(assemblyVideo || usageVideo || cautionVideo);
+  const productVideos = getProductVideos(product);
+  const hasVideo = productVideos.length > 0 || !!(assemblyVideo || usageVideo || cautionVideo);
 
   const getHasRelated = () => {
     const relatedSkus = product['関連商品'];
@@ -1622,9 +1647,16 @@ window.showProductDetails = function(sku) {
   // Video embeds
   const videoSection = document.getElementById('detailVideoSection');
   let videoHtml = '';
-  videoHtml += renderVideoElement('組立説明動画', assemblyVideo);
-  videoHtml += renderVideoElement('使用イメージ・紹介動画', usageVideo);
-  videoHtml += renderVideoElement('注意事項説明動画', cautionVideo);
+
+  if (productVideos && productVideos.length > 0) {
+    productVideos.forEach(v => {
+      videoHtml += renderVideoElement(v.title, v.url);
+    });
+  } else {
+    videoHtml += renderVideoElement('組立説明動画', assemblyVideo);
+    videoHtml += renderVideoElement('使用イメージ・紹介動画', usageVideo);
+    videoHtml += renderVideoElement('注意事項説明動画', cautionVideo);
+  }
 
   if (videoHtml) {
     videoSection.style.display = 'block';
@@ -2156,6 +2188,16 @@ function mergeMasterFile(masterType, csvText) {
           }
         });
       }
+      
+      // If importing video master, clear videos array of products
+      if (masterType === 'videoMaster') {
+        APP_STATE.products.forEach(p => {
+          p.videos = [];
+          p['組立動画URL'] = '';
+          p['使用動画URL'] = '';
+          p['注意動画URL'] = '';
+        });
+      }
 
       let updatedCount = 0;
       let addedCount = 0;
@@ -2421,36 +2463,56 @@ function mergeMasterFile(masterType, csvText) {
             
             // Check if there is a generic 'URL' column with prefixes (e.g. "説明動画 : https://...")
             const genericUrl = (row['URL'] || row['url'] || row['動画URL'] || row['動画'] || '').trim();
+            
+            // Initialize videos array if missing
+            if (!product.videos) product.videos = [];
+            
+            let label = '';
+            let parsedUrl = '';
+            
             if (genericUrl) {
-              if (genericUrl.includes('組立動画')) {
-                const cleanUrl = genericUrl.replace(/^組立動画\s*[:：]\s*/, '').trim();
-                assemblyUrl = cleanUrl;
-              } else if (genericUrl.includes('説明動画') || genericUrl.includes('使用動画') || genericUrl.includes('紹介動画')) {
-                const cleanUrl = genericUrl.replace(/^(説明動画|使用動画|紹介動画)\s*[:：]\s*/, '').trim();
-                usageUrl = cleanUrl;
-              } else if (genericUrl.includes('注意動画') || genericUrl.includes('警告動画')) {
-                const cleanUrl = genericUrl.replace(/^(注意動画|警告動画)\s*[:：]\s*/, '').trim();
-                cautionUrl = cleanUrl;
+              // Parse label and URL
+              const match = genericUrl.match(/^([^:：]+)\s*[:：]\s*(.+)$/);
+              if (match) {
+                label = match[1].trim();
+                parsedUrl = match[2].trim();
               } else {
-                // No prefix fallback
+                parsedUrl = genericUrl;
                 if (genericUrl.toLowerCase().includes('youtube.com') || genericUrl.toLowerCase().includes('youtu.be')) {
-                  assemblyUrl = genericUrl;
+                  label = '組立動画';
                 } else {
-                  usageUrl = genericUrl;
+                  label = '使用動画';
                 }
+              }
+            } else {
+              // Fallback to direct mapping
+              if (assemblyUrl) { label = '組立動画'; parsedUrl = assemblyUrl; }
+              else if (usageUrl) { label = '使用動画'; parsedUrl = usageUrl; }
+              else if (cautionUrl) { label = '注意動画'; parsedUrl = cautionUrl; }
+            }
+            
+            if (parsedUrl) {
+              const exists = product.videos.some(v => v.url === parsedUrl);
+              if (!exists) {
+                product.videos.push({
+                  title: label || '解説動画',
+                  url: parsedUrl
+                });
+              }
+              
+              // Also sync to flat fields for backwards compatibility
+              if (label.includes('組立動画') || label.includes('組立')) {
+                product['組立動画URL'] = parsedUrl;
+              } else if (label.includes('使用動画') || label.includes('説明動画') || label.includes('紹介') || label.includes('使用')) {
+                product['使用動画URL'] = parsedUrl;
+              } else if (label.includes('注意') || label.includes('警告')) {
+                product['注意動画URL'] = parsedUrl;
               }
             }
             
-            if (assemblyUrl) product['組立動画URL'] = assemblyUrl;
-            if (usageUrl) product['使用動画URL'] = usageUrl;
-            if (cautionUrl) product['注意動画URL'] = cautionUrl;
             if (imgUrl) product['商品画像'] = imgUrl;
 
-            console.log(`[videoMaster Import] SKU in row: "${skuVal}" | Matched database products: ${idxs.length} items. Updated values for this product (SKU: ${product['商品番号']}):`, {
-              '組立動画URL': product['組立動画URL'],
-              '使用動画URL': product['使用動画URL'],
-              '注意動画URL': product['注意動画URL']
-            });
+            console.log(`[videoMaster Import] SKU in row: "${skuVal}" | Matched database products: ${idxs.length} items. Updated videos:`, product.videos);
           }
         });
       }); // ends results.data.forEach
