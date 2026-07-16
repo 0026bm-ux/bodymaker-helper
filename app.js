@@ -1508,47 +1508,7 @@ window.showProductDetails = function(sku) {
     }
   }
 
-  // Manual PDF Links (Check IndexedDB first, then fallback to URL)
-  const manualSection = document.getElementById('manual');
-  const manualBox = document.getElementById('detailManualBox');
-  pdfStore.getPdf(product['商品番号']).then(record => {
-    if (record && record.blob) {
-      const localUrl = URL.createObjectURL(record.blob);
-      manualSection.style.display = 'block';
-      manualBox.style.display = 'flex';
-      manualBox.onclick = () => window.open(localUrl, '_blank');
-      manualBox.querySelector('.link-box-title').innerText = record.fileName || '取扱説明書・組立説明書 (ローカル保存)';
-    } else {
-      const pdfUrl = getProductSpec(product, '取扱説明書PDF');
-      if (pdfUrl) {
-        manualSection.style.display = 'block';
-        manualBox.style.display = 'flex';
-        manualBox.onclick = () => window.open(pdfUrl, '_blank');
-        manualBox.querySelector('.link-box-title').innerText = '取扱説明書・組立説明書.pdf';
-      } else {
-        manualSection.style.display = 'none';
-        manualBox.style.display = 'none';
-      }
-    }
-  }).catch(err => {
-    console.error("Failed to read IndexedDB PDF:", err);
-    const pdfUrl = getProductSpec(product, '取扱説明書PDF');
-    if (pdfUrl) {
-      manualSection.style.display = 'block';
-      manualBox.style.display = 'flex';
-      manualBox.onclick = () => window.open(pdfUrl, '_blank');
-    } else {
-      manualSection.style.display = 'none';
-      manualBox.style.display = 'none';
-    }
-  });
-
-  // Video embeds
-  const videoSection = document.getElementById('detailVideoSection');
-  const assemblyVideo = getProductSpec(product, '組立動画URL');
-  const usageVideo = getProductSpec(product, '使用動画URL');
-  const cautionVideo = getProductSpec(product, '注意動画URL');
-  
+  // Helper to render video or link (defined at the top for scope in both Manual and Video sections)
   const renderVideoElement = (title, url) => {
     if (!url) return '';
     const isYoutube = url.includes('youtube.com') || url.includes('youtu.be');
@@ -1575,6 +1535,68 @@ window.showProductDetails = function(sku) {
       `;
     }
   };
+
+  // Manual PDF Links (Check IndexedDB first, then fallback to URL)
+  const manualSection = document.getElementById('manual');
+  const manualBox = document.getElementById('detailManualBox');
+  const manualVideoContainer = document.getElementById('manualVideoContainer');
+
+  const updateManualSection = (hasPdf, pdfUrl, pdfName, clickAction) => {
+    const usageVideo = getProductSpec(product, '使用動画URL');
+    
+    // Check if we have PDF or Video
+    if (hasPdf || usageVideo) {
+      manualSection.style.display = 'block';
+    } else {
+      manualSection.style.display = 'none';
+    }
+
+    // PDF box setup
+    if (hasPdf) {
+      manualBox.style.display = 'flex';
+      manualBox.onclick = clickAction;
+      manualBox.querySelector('.link-box-title').innerText = pdfName;
+    } else {
+      manualBox.style.display = 'none';
+    }
+
+    // Video container setup (Render explanation video in manual tab!)
+    if (usageVideo) {
+      manualVideoContainer.innerHTML = renderVideoElement('取扱・説明動画', usageVideo);
+      manualVideoContainer.style.display = 'block';
+    } else {
+      manualVideoContainer.innerHTML = '';
+      manualVideoContainer.style.display = 'none';
+    }
+  };
+
+  pdfStore.getPdf(product['商品番号']).then(record => {
+    if (record && record.blob) {
+      const localUrl = URL.createObjectURL(record.blob);
+      updateManualSection(true, localUrl, record.fileName || '取扱説明書・組立説明書 (ローカル保存)', () => window.open(localUrl, '_blank'));
+    } else {
+      const pdfUrl = getProductSpec(product, '取扱説明書PDF');
+      if (pdfUrl) {
+        updateManualSection(true, pdfUrl, '取扱説明書・組立説明書.pdf', () => window.open(pdfUrl, '_blank'));
+      } else {
+        updateManualSection(false, '', '', null);
+      }
+    }
+  }).catch(err => {
+    console.error("Failed to read IndexedDB PDF:", err);
+    const pdfUrl = getProductSpec(product, '取扱説明書PDF');
+    if (pdfUrl) {
+      updateManualSection(true, pdfUrl, '取扱説明書・組立説明書.pdf', () => window.open(pdfUrl, '_blank'));
+    } else {
+      updateManualSection(false, '', '', null);
+    }
+  });
+
+  // Video embeds
+  const videoSection = document.getElementById('detailVideoSection');
+  const assemblyVideo = getProductSpec(product, '組立動画URL');
+  const usageVideo = getProductSpec(product, '使用動画URL');
+  const cautionVideo = getProductSpec(product, '注意動画URL');
 
   let videoHtml = '';
   videoHtml += renderVideoElement('組立説明動画', assemblyVideo);
