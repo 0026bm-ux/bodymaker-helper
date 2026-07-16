@@ -1481,7 +1481,12 @@ window.showProductDetails = function(sku) {
   document.getElementById('valCapacity').innerText = getProductSpec(product, '耐荷重') || '-';
   
   // Debug Info
-  document.getElementById('debugInfo').innerText = `[DEBUG] SKU: ${product['商品番号']} | 組立動画URL: "${product['組立動画URL'] || ''}" | 使用動画URL: "${product['使用動画URL'] || ''}" | 注意動画URL: "${product['注意動画URL'] || ''}"`;
+  const debugInfo = document.getElementById('debugInfo');
+  if (debugInfo) {
+    debugInfo.style.display = 'block';
+    const videosStr = product.videos ? JSON.stringify(product.videos) : 'undefined';
+    debugInfo.innerText = `[DEBUG v3.10] SKU: ${product['商品番号']} | videos array: ${videosStr} | 組立動画URL: "${product['組立動画URL'] || ''}" | 使用動画URL: "${product['使用動画URL'] || ''}"`;
+  }
   
   // Precautions bullet items
   const cautionList = document.getElementById('detailCaution');
