@@ -1549,46 +1549,39 @@ window.showProductDetails = function(sku) {
   const usageVideo = getProductSpec(product, '使用動画URL');
   const cautionVideo = getProductSpec(product, '注意動画URL');
   
-  let videoCount = 0;
+  const renderVideoElement = (title, url) => {
+    if (!url) return '';
+    const isYoutube = url.includes('youtube.com') || url.includes('youtu.be');
+    if (isYoutube) {
+      return `
+        <div style="margin-bottom: 16px;">
+          <span class="spec-label" style="display:block; margin-bottom: 6px; font-weight:700;">■ ${title}</span>
+          <div class="video-wrapper">
+            <iframe src="${formatVideoEmbedUrl(url)}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+          </div>
+        </div>
+      `;
+    } else {
+      return `
+        <div style="margin-bottom: 16px;">
+          <span class="spec-label" style="display:block; margin-bottom: 6px; font-weight:700;">■ ${title}</span>
+          <a href="${url}" target="_blank" class="settings-btn" style="display: inline-flex; align-items: center; gap: 8px; text-decoration: none; padding: 10px 16px; font-weight: 500; font-size: 14px; margin-top: 4px; border-radius: var(--radius-md); background-color: var(--color-bg-card); border: 1px solid var(--color-border); color: var(--color-text-main); width: fit-content; transition: all 0.2s;">
+            <svg style="width:16px; height:16px;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"/>
+            </svg>
+            <span>動画・フォルダを開く (外部サイト)</span>
+          </a>
+        </div>
+      `;
+    }
+  };
+
   let videoHtml = '';
+  videoHtml += renderVideoElement('組立説明動画', assemblyVideo);
+  videoHtml += renderVideoElement('使用イメージ・紹介動画', usageVideo);
+  videoHtml += renderVideoElement('注意事項説明動画', cautionVideo);
 
-  if (assemblyVideo) {
-    videoCount++;
-    videoHtml += `
-      <div style="margin-bottom: 16px;">
-        <span class="spec-label" style="display:block; margin-bottom: 6px; font-weight:700;">■ 組立説明動画</span>
-        <div class="video-wrapper">
-          <iframe src="${formatVideoEmbedUrl(assemblyVideo)}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-        </div>
-      </div>
-    `;
-  }
-
-  if (usageVideo) {
-    videoCount++;
-    videoHtml += `
-      <div style="margin-bottom: 16px;">
-        <span class="spec-label" style="display:block; margin-bottom: 6px; font-weight:700;">■ 使用イメージ・紹介動画</span>
-        <div class="video-wrapper">
-          <iframe src="${formatVideoEmbedUrl(usageVideo)}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-        </div>
-      </div>
-    `;
-  }
-
-  if (cautionVideo) {
-    videoCount++;
-    videoHtml += `
-      <div>
-        <span class="spec-label" style="display:block; margin-bottom: 6px; font-weight:700; color: var(--color-status-danger);">■ 注意事項説明動画</span>
-        <div class="video-wrapper">
-          <iframe src="${formatVideoEmbedUrl(cautionVideo)}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-        </div>
-      </div>
-    `;
-  }
-
-  if (videoCount > 0) {
+  if (videoHtml) {
     videoSection.style.display = 'block';
     document.getElementById('videoContainer').innerHTML = videoHtml;
   } else {
@@ -2375,9 +2368,38 @@ function mergeMasterFile(masterType, csvText) {
             product['取扱説明書PDF'] = row['URL'] || row['取扱説明書PDF'] || product['取扱説明書PDF'] || '';
           } 
           else if (masterType === 'videoMaster') {
-            product['組立動画URL'] = row['組立動画URL'] || product['組立動画URL'] || '';
-            product['使用動画URL'] = row['使用動画URL'] || product['使用動画URL'] || '';
-            product['商品画像'] = row['商品画像'] || product['商品画像'] || '';
+            // Check direct mapping first
+            let assemblyUrl = row['組立動画URL'] || row['組立動画'] || '';
+            let usageUrl = row['使用動画URL'] || row['使用動画'] || row['説明動画URL'] || row['説明動画'] || '';
+            let cautionUrl = row['注意動画URL'] || row['注意動画'] || '';
+            let imgUrl = row['商品画像'] || row['画像パス'] || row['画像'] || '';
+            
+            // Check if there is a generic 'URL' column with prefixes (e.g. "説明動画 : https://...")
+            const genericUrl = (row['URL'] || row['url'] || row['動画URL'] || row['動画'] || '').trim();
+            if (genericUrl) {
+              if (genericUrl.includes('組立動画')) {
+                const cleanUrl = genericUrl.replace(/^組立動画\s*[:：]\s*/, '').trim();
+                assemblyUrl = cleanUrl;
+              } else if (genericUrl.includes('説明動画') || genericUrl.includes('使用動画') || genericUrl.includes('紹介動画')) {
+                const cleanUrl = genericUrl.replace(/^(説明動画|使用動画|紹介動画)\s*[:：]\s*/, '').trim();
+                usageUrl = cleanUrl;
+              } else if (genericUrl.includes('注意動画') || genericUrl.includes('警告動画')) {
+                const cleanUrl = genericUrl.replace(/^(注意動画|警告動画)\s*[:：]\s*/, '').trim();
+                cautionUrl = cleanUrl;
+              } else {
+                // No prefix fallback
+                if (genericUrl.toLowerCase().includes('youtube.com') || genericUrl.toLowerCase().includes('youtu.be')) {
+                  assemblyUrl = genericUrl;
+                } else {
+                  usageUrl = genericUrl;
+                }
+              }
+            }
+            
+            if (assemblyUrl) product['組立動画URL'] = assemblyUrl;
+            if (usageUrl) product['使用動画URL'] = usageUrl;
+            if (cautionUrl) product['注意動画URL'] = cautionUrl;
+            if (imgUrl) product['商品画像'] = imgUrl;
           }
         });
       }); // ends results.data.forEach
