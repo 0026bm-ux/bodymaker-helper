@@ -1554,7 +1554,7 @@ window.showProductDetails = function(sku) {
       for (const [store, val] of Object.entries(calcStock)) {
         const num = val;
         const classText = num > 0 ? 'positive' : 'zero';
-        const displayVal = store.includes('オンライン価格') ? `${num.toLocaleString()} 円` : `${num} 点`;
+        const displayVal = store.includes('オンライン') ? `${num.toLocaleString()} 円` : `${num} 点`;
         stockHtml += `<tr><td>${store}</td><td class="store-stock-val ${classText}">${displayVal}</td></tr>`;
       }
       stockHtml += '</tbody></table></div>';
@@ -1569,7 +1569,7 @@ window.showProductDetails = function(sku) {
       for (const [store, val] of Object.entries(product['店在庫'])) {
         const num = parseInt(val, 10) || 0;
         const classText = num > 0 ? 'positive' : 'zero';
-        const displayVal = store.includes('オンライン価格') ? `${num.toLocaleString()} 円` : `${num} 点`;
+        const displayVal = store.includes('オンライン') ? `${num.toLocaleString()} 円` : `${num} 点`;
         stockHtml += `<tr><td>${store}</td><td class="store-stock-val ${classText}">${displayVal}</td></tr>`;
       }
       stockHtml += '</tbody></table></div>';
@@ -2336,7 +2336,7 @@ function mergeMasterFile(masterType, csvText) {
         if (!skuVal && !janVal) return; // skip row if no identifier
         processedRowsCount++;
 
-        const allowPrefix = !['nsMaster', 'setCompositionMaster'].includes(masterType);
+        const allowPrefix = ['videoMaster', 'manualMaster'].includes(masterType);
         let idxs = findProductIndexes(skuVal, janVal, allowPrefix);
         
         // If product doesn't exist, create it in the catalog immediately
