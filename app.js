@@ -887,8 +887,8 @@ function showSuggestions(query) {
     return;
   }
 
-  // Limit suggestions list to 5 items
-  const showList = results.slice(0, 5);
+  // Limit suggestions list to 20 items
+  const showList = results.slice(0, 20);
   let html = '';
   
   showList.forEach(item => {
