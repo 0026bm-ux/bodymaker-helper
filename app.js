@@ -1378,7 +1378,7 @@ window.showProductDetails = function(sku) {
       
       const sum = w + l + h;
       const vol = (w * l * h) / 1000000; // in m^3
-      const volWeight = (w * l * h) / 6000;
+      const volWeight = vol * 280;
       
       return {
         length: String(l),
@@ -1449,7 +1449,7 @@ window.showProductDetails = function(sku) {
           const wNum = parseFloat(cW) || 0;
           const hNum = parseFloat(cH) || 0;
           if (lNum > 0 && wNum > 0 && hNum > 0) {
-            cVolWeight = (lNum * wNum * hNum) / 6000;
+            cVolWeight = ((lNum * wNum * hNum) / 1000000) * 280;
           }
         }
 
@@ -1495,7 +1495,7 @@ window.showProductDetails = function(sku) {
       const wNum = parseFloat(wVal) || 0;
       const hNum = parseFloat(hVal) || 0;
       if (lNum > 0 && wNum > 0 && hNum > 0) {
-        convVal = ((lNum * wNum * hNum) / 6000).toFixed(2) + ' kg';
+        convVal = (((lNum * wNum * hNum) / 1000000) * 280).toFixed(2) + ' kg';
       }
     }
   }
@@ -2191,8 +2191,13 @@ function normalizeHeader(h) {
              .replace(/[（\uff08]([2２])名～[）\uff09]/g, '2名')
              .replace(/[（\uff08]([2２])名~[）\uff09]/g, '2名');
   } else {
-    // Remove trailing footnotes or brackets content like (cm) or (kg)
-    str = str.replace(/[\(\uff08].*?[\)\uff09]/g, '');
+    // If header specifies meters (e.g. (m), (m3), (㎥)), keep it distinct with _m suffix
+    if (str.match(/[\(\uff08][mM\u33a5\u33a1][\)\uff09]/) || str.match(/[\(\uff08]m3[\)\uff09]/)) {
+      str = str.replace(/[\(\uff08].*?[\)\uff09]/g, '_m');
+    } else {
+      // Remove trailing footnotes or brackets content like (cm) or (kg)
+      str = str.replace(/[\(\uff08].*?[\)\uff09]/g, '');
+    }
   }
   
   return str;
@@ -2453,13 +2458,19 @@ function mergeMasterFile(masterType, csvText) {
             const volVal = (row['体積'] || row['体積(？)'] || row['体積(?)'] || row['体積（m3）'] || row['体積(㎥)'] || row['体積(m3)'] || '').trim();
             const saitsuVal = (row['才数'] || '').trim();
             
-            // Calculate Volume Weight using coefficient 6000
+            // Use imported '容積換算重量' value if present; otherwise, calculate using standard m3 * 280
+            const excelConvVal = (row['容積換算重量'] || '').trim();
             let convVal = '';
-            const lNum = parseFloat(lVal) || 0;
-            const wNum = parseFloat(wVal) || 0;
-            const hNum = parseFloat(hVal) || 0;
-            if (lNum > 0 && wNum > 0 && hNum > 0) {
-              convVal = ((lNum * wNum * hNum) / 6000).toFixed(2) + ' kg';
+            if (excelConvVal) {
+              convVal = excelConvVal.toLowerCase().endsWith('kg') ? excelConvVal : excelConvVal + ' kg';
+            } else {
+              const lNum = parseFloat(lVal) || 0;
+              const wNum = parseFloat(wVal) || 0;
+              const hNum = parseFloat(hVal) || 0;
+              if (lNum > 0 && wNum > 0 && hNum > 0) {
+                const volM3 = (lNum * wNum * hNum) / 1000000;
+                convVal = (volM3 * 280).toFixed(2) + ' kg';
+              }
             }
             
             product['pkg_length'] = lVal;
